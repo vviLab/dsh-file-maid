@@ -104,12 +104,21 @@ test('M-06 a root the session does not own is refused before any read', async (t
   assert.equal(result.errors[0].code, 'E_MAID_NO_ROOT');
 });
 
-test('M-07 the descriptors name the three endpoints and the service carries them', () => {
-  const surface = createManageSurface({ ctx: {}, roots: { projectRoot: async () => {}, scanRoot: async () => ({}) } });
-  assert.deepEqual(surface.descriptors.map((item) => item.id), ['fileMaid/pick', 'fileMaid/save', 'fileMaid/scan']);
+test('M-07 the descriptors name the four endpoints and the service carries them', () => {
+  const surface = createManageSurface({
+    ctx: {},
+    roots: { projectRoot: async () => {}, scanRoot: async () => ({}), reloadRoot: async () => 0 },
+  });
+  assert.deepEqual(surface.descriptors.map((item) => item.id), ['fileMaid/draft', 'fileMaid/pick', 'fileMaid/save', 'fileMaid/scan']);
   assert.equal(typeof surface.service.save, 'function');
   assert.equal(typeof surface.service.pick, 'function');
   assert.equal(typeof surface.service.scan, 'function');
+  assert.equal(typeof surface.service.draft, 'function');
+  // `draft` takes the typed path as a plain string: the card sends it positionally,
+  // so the parameter must not be decoded as JSON.
+  const draft = surface.descriptors.find((item) => item.id === 'fileMaid/draft');
+  assert.deepEqual(draft.parameters.map((item) => item.name), ['root', 'sessionId', 'path']);
+  assert.equal(draft.parameters[2].codec.mode, 'strict');
   assert.equal(surface.service.typertRemote.serviceKey, 'fileMaid');
 });
 

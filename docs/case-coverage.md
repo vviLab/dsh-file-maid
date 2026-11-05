@@ -129,3 +129,31 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-34 | UI-34 the count and the actions share the right edge | `ui.test.js` |
 | UI-35 | UI-35 opening the form closes the expanded row | `ui.test.js` |
 | UI-36 | UI-36 the directory page has no native title tooltips | `ui.test.js` |
+
+## 未启用根的启用流程
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| M-30 | M-30 draft describes each kind of bad path | `init.test.js` |
+| M-31 | M-31 canInit is true only without a table or with a blank one | `init.test.js` |
+| M-32 | M-32 draft reports a symlink anywhere on the path | `init.test.js` |
+| M-33 | M-33 init refuses an empty list and a list over the cap | `init.test.js` |
+| M-34 | M-34 init refuses a folder that is not on disk | `init.test.js` |
+| M-35 | M-35 init refuses a row without a purpose | `init.test.js` |
+| M-36 | M-36 two spellings of one folder are one row | `init.test.js` |
+| M-37 | M-37 the default folder must be one of the listed rows | `init.test.js` |
+| M-38 | M-38 init writes the table, scans, reloads and audits | `init.test.js` |
+| M-39 | M-39 an existing table is refused and left untouched | `init.test.js` |
+| M-40 | M-40 a blank table is replaced and the previous hash is recorded | `init.test.js` |
+| M-41 | M-41 an opted-out root refuses setup | `init.test.js` |
+| M-42 | M-42 a read-only session writes nothing | `init.test.js` |
+| M-43 | M-43 two concurrent setups of one root produce one table | `init.test.js` |
+| M-44 | M-44 paths are normalised before they are checked | `init.test.js` |
+| M-45 | M-45 a blank table still reads as ERROR, not as a new state | `init.test.js` |
+| UI-40 | UI-40 an unset root renders the setup entry instead of an empty body | `ui.test.js` |
+| UI-41 | UI-41 the add button waits for a path, a purpose and a clean check | `ui.test.js` |
+| UI-42 | UI-42 a duplicate row is refused before any request | `ui.test.js` |
+| UI-43 | UI-43 the confirm screen lists the rows and states the promise | `ui.test.js` |
+| UI-44 | UI-44 an existing table counts as success on the second attempt | `ui.test.js` |
+| UI-45 | UI-45 the setup layer closes back into the directory view | `ui.test.js` |
+| UI-46 | UI-46 every setup hook in the renderer is also styled | `ui.test.js` |

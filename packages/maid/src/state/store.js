@@ -163,6 +163,20 @@ export async function readCatalog(root) {
     };
   }
 
+  if (raw === null) {
+    // An empty file, a comment-only file and the literal `null` all parse to null.
+    // They are not a corrupt table: the card is allowed to replace one, and only
+    // the init branch reads this flag.
+    return {
+      state: 'ERROR',
+      blank: true,
+      text,
+      hash: hashCatalog(text),
+      errors: [{ code: 'E_MAID_YAML', message: 'catalog.yml is empty' }],
+      warnings,
+    };
+  }
+
   const verdict = validateCatalog(raw);
   warnings.push(...verdict.warnings);
   if (!verdict.ok) {

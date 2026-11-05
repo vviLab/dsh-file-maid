@@ -9,11 +9,12 @@
  * @module file-maid/surfaces/manage
  */
 import { execFile } from 'node:child_process';
-import { stat } from 'node:fs/promises';
+import { lstat, realpath, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { validateCatalog } from '../core/catalog.js';
 import { canonicalCatalogPath, validateCatalogPath } from '../core/path.js';
 import * as store from '../state/store.js';
+import { isReadOnlySession } from '../runtime/permissions.js';
 
 /** npm package name the Remote contribution is filed under. */
 export const REMOTE_PACKAGE = 'dsh-file-maid';
@@ -73,6 +74,7 @@ function invocation(method, names) {
  */
 export function remoteDescriptors() {
   return [
+    invocation('draft', ['root', 'sessionId', 'path']),
     invocation('pick', ['root', 'sessionId']),
     invocation('save', ['root', 'sessionId', 'payload']),
     invocation('scan', ['root', 'sessionId']),
@@ -259,7 +261,7 @@ export function createManageSurface(options) {
    * Resolve the session named by the card and check it owns the root.
    * @param {string} root - the root the card claims.
    * @param {string} sessionId - the session the card names.
-   * @returns {{ ok: true, root: string } | { ok: false, errors: object[] }} the checked root.
+   * @returns {{ ok: true, root: string, session?: object, readOnly?: boolean } | { ok: false, errors: object[] }} the checked root.
    */
   const checkRoot = (root, sessionId) => {
     if (typeof sessionId !== 'string' || sessionId.length === 0) {
@@ -282,7 +284,8 @@ export function createManageSurface(options) {
     if (typeof root !== 'string' || resolve(root) !== resolve(own)) {
       return { ok: false, errors: [{ code: 'E_MAID_NO_ROOT', message: 'the root does not belong to this session' }] };
     }
-    return { ok: true, root: own };
+    const session = sessions.get(sessionId);
+    return { ok: true, root: own, session, readOnly: isReadOnlySession(ctx, session) };
   };
 
   /**
@@ -369,8 +372,233 @@ export function createManageSurface(options) {
     return { ok: true, dirs, rootDefault: catalog.rootDefault };
   };
 
+  /** How long a second initialisation may wait for the first one, in milliseconds. */
+  const BUSY_MS = 10_000;
+
+  /** One promise chain per root, so two cards cannot write the table at once. */
+  const queues = new Map();
+
+  /**
+   * Run one task after every earlier task on the same root has settled.
+   * @param {string} root - absolute controlled root.
+   * @param {() => Promise<object>} task - the work.
+   * @returns {Promise<object>} the task result, or `E_MAID_BUSY` when the wait exceeded the limit.
+   */
+  const withRootLock = async (root, task) => {
+    const key = resolve(root);
+    const prior = queues.get(key) ?? Promise.resolve();
+    const started = Date.now();
+    const run = prior.then(async () => {
+      if (Date.now() - started > BUSY_MS) {
+        return { ok: false, errors: [{ code: 'E_MAID_BUSY', message: '另一个写入正在进行，稍后再试。' }] };
+      }
+      return task();
+    });
+    queues.set(
+      key,
+      run.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    try {
+      return await run;
+    } finally {
+      if (queues.get(key) === undefined) queues.delete(key);
+    }
+  };
+
+  /**
+   * Describe one candidate path without touching the disk beyond `lstat`/`stat`.
+   * @param {string} root - absolute controlled root.
+   * @param {string} input - what the card typed or picked.
+   * @returns {Promise<object | null>} the description, or null for an empty input.
+   */
+  const describePath = async (root, input) => {
+    const typed = typeof input === 'string' ? input.trim() : '';
+    if (typed === '') return null;
+    // Backslashes come from a pasted Windows path; a trailing slash is common after
+    // a folder dialog. Both are the same folder the user means.
+    const normalized = typed.replace(/\\+/gu, '/').replace(/\/+$/u, '');
+    const base = { input: typed, relative: normalized, exists: false, kind: 'absent', problem: null };
+    const verdict = validateCatalogPath(normalized);
+    if (!verdict.ok) {
+      return { ...base, problem: '路径只能写相对工作区的文件夹名，最多 3 段，且不能用 .maid、.git 这类保留目录。' };
+    }
+    const relativePath = canonicalCatalogPath(normalized);
+    const parts = relativePath.split('/');
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      const candidate = join(root, ...parts.slice(0, depth));
+      const info = await lstat(candidate).catch(() => undefined);
+      if (info === undefined) {
+        return { ...base, relative: relativePath, kind: 'absent', problem: '这个文件夹不在磁盘上。' };
+      }
+      if (info.isSymbolicLink()) {
+        return { ...base, relative: relativePath, kind: 'link', problem: '这个路径经过符号链接，写入后目录表会判错。换真实路径。' };
+      }
+      if (depth < parts.length && !info.isDirectory()) {
+        return { ...base, relative: relativePath, kind: 'file', problem: '路径中间有一段不是文件夹。' };
+      }
+      if (depth === parts.length) {
+        if (!info.isDirectory()) {
+          return { ...base, relative: relativePath, kind: 'file', exists: true, problem: '这是一个文件，不是文件夹。' };
+        }
+        return { ...base, relative: relativePath, exists: true, kind: 'dir', problem: null };
+      }
+    }
+    return { ...base, relative: relativePath };
+  };
+
+  /**
+   * Create a catalog from the folders the card listed.
+   *
+   * The card is the only writer of `catalog.yml` this plugin has, so every rule
+   * the loader enforces is applied here first: the file must never be written in
+   * a state that would load as `ERROR` on the next scan.
+   * @param {object} owned - result of `checkRoot`.
+   * @param {object} payload - `{ dirs, rootDefault }`.
+   * @param {string} sessionId - session the card names.
+   * @returns {Promise<object>} `{ ok, value }` or `{ ok: false, errors }`.
+   */
+  const runInit = async (owned, payload, sessionId) => {
+    if (owned.readOnly === true) {
+      return { ok: false, errors: [{ code: 'E_MAID_READONLY', message: '这个会话是只读的，不能写入目录表。' }] };
+    }
+    const listed = Array.isArray(payload.dirs) ? payload.dirs : [];
+    if (listed.length === 0) {
+      return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '至少要添加一个目录。' }] };
+    }
+    if (listed.length > 64) {
+      return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '最多 64 个目录。' }] };
+    }
+
+    const dirs = [];
+    const seen = new Map();
+    for (const item of listed) {
+      const wanted = typeof item?.path === 'string' ? item.path : '';
+      const described = await describePath(owned.root, wanted);
+      if (described === null) {
+        return { ok: false, errors: [{ code: 'E_MAID_PATH', message: '路径不能为空。', path: '' }] };
+      }
+      if (described.problem !== null || described.exists !== true) {
+        return { ok: false, errors: [{ code: 'E_MAID_PATH', message: described.problem ?? '这个文件夹不可用。', path: described.relative }] };
+      }
+      const purpose = typeof item?.purpose === 'string' ? item.purpose.trim() : '';
+      if (purpose === '') {
+        return { ok: false, errors: [{ code: 'E_MAID_PURPOSE_MISSING', message: '用途不能为空，写一句话说明这个目录收什么。', path: described.relative }] };
+      }
+      // Two spellings of one folder are one row: the catalog is compared by what
+      // the filesystem says, not by how the string was typed.
+      let identity;
+      try {
+        const real = await realpath(join(owned.root, described.relative));
+        const info = await stat(real);
+        identity = `${info.dev}:${info.ino}`;
+      } catch (error) {
+        return { ok: false, errors: [{ code: 'E_MAID_IO', message: `cannot read the folder: ${error?.message ?? String(error)}`, path: described.relative }] };
+      }
+      if (seen.has(identity)) {
+        return { ok: false, errors: [{ code: 'E_MAID_DUPLICATE', message: '这个目录已经加过了。', path: described.relative }] };
+      }
+      seen.set(identity, described.relative);
+      dirs.push({ path: described.relative, purpose, excludes: typeof item?.excludes === 'string' ? item.excludes.trim() : '' });
+    }
+
+    const rootDefault = typeof payload.rootDefault === 'string' ? canonicalCatalogPath(payload.rootDefault) : '';
+    if (rootDefault === '' || !dirs.some((dir) => dir.path === rootDefault)) {
+      return { ok: false, errors: [{ code: 'E_MAID_DEFAULT_MISSING', message: '选一个默认落点，判不出来的文件会进这里。', path: '' }] };
+    }
+    const verdict = validateCatalog({ version: 1, root_default: rootDefault, dirs, rules: [] });
+    if (!verdict.ok) return { ok: false, errors: verdict.errors };
+
+    return withRootLock(owned.root, async () => {
+      const loaded = await store.readCatalog(owned.root);
+      if (loaded.state === 'MANAGED') {
+        return { ok: false, errors: [{ code: 'E_MAID_EXISTS', message: '目录表已经存在，刷新后就能看到。' }] };
+      }
+      if (loaded.state === 'NOT_MANAGED') {
+        return { ok: false, errors: [{ code: 'E_MAID_OPT_OUT', message: '这个根已经关闭管理。' }] };
+      }
+      if (loaded.state === 'ERROR' && loaded.blank !== true) {
+        return { ok: false, errors: [{ code: 'E_MAID_CATALOG', message: '目录表有问题，先修好再回来。' }] };
+      }
+      try {
+        await store.writeCatalog(owned.root, store.serializeCatalog(verdict.catalog, { root: owned.root }));
+      } catch (error) {
+        return { ok: false, errors: [{ code: 'E_MAID_IO', message: `cannot write catalog.yml: ${error?.message ?? String(error)}` }] };
+      }
+      try {
+        await store.appendLog(owned.root, 'audit', {
+          op: 'init',
+          dirs: dirs.length,
+          rootDefault,
+          session: sessionId,
+          previousHash: loaded.hash ?? null,
+        });
+      } catch {
+        /* a missing audit line must not undo a written table */
+      }
+      let scan = null;
+      try {
+        const outcome = await roots.scanRoot(owned.root);
+        scan = {
+          files: outcome.files ?? 0,
+          dirs: outcome.dirs ?? 0,
+          elapsed: outcome.elapsed ?? 0,
+          degraded: outcome.degraded === true,
+          baseline: outcome.baseline === true,
+        };
+      } catch {
+        /* the table is on disk; a failed first count is a warning, not a rollback */
+      }
+      try {
+        await roots.reloadRoot(owned.root);
+      } catch {
+        /* the next tool call re-reads anyway */
+      }
+      return {
+        ok: true,
+        value: {
+          state: 'MANAGED',
+          dirs: dirs.length,
+          rootDefault,
+          scan,
+          warnings: verdict.warnings ?? [],
+          persisted: true,
+        },
+      };
+    });
+  };
+
   const service = {
     typertRemote: { service: undefined, serviceKey: REMOTE_NAMESPACE, namespace: REMOTE_NAMESPACE },
+    /**
+     * Describe one candidate folder, and whether this root can still be set up.
+     * Read-only: it never writes and never scans.
+     * @param {string} root - controlled root.
+     * @param {string} sessionId - session the card names.
+     * @param {string} path - relative folder the card typed, or the empty string.
+     * @returns {Promise<object>} `{ ok, value }` or `{ ok: false, errors }`.
+     */
+    async draft(root, sessionId, path) {
+      const owned = checkRoot(root, sessionId);
+      if (!owned.ok) return { ok: false, errors: owned.errors };
+      const loaded = await store.readCatalog(owned.root);
+      const described = await describePath(owned.root, path);
+      return {
+        ok: true,
+        value: {
+          state: loaded.state,
+          canInit: loaded.state === 'UNINITIALIZED' || (loaded.state === 'ERROR' && loaded.blank === true),
+          canWrite: owned.readOnly !== true,
+          readOnly: owned.readOnly === true,
+          rootDefault: loaded.catalog?.rootDefault ?? null,
+          path: described,
+          errors: loaded.errors ?? [],
+          warnings: loaded.warnings ?? [],
+        },
+      };
+    },
     /**
      * Open the system folder dialog and return the pick as a path inside the root.
      *
@@ -442,6 +670,10 @@ export function createManageSurface(options) {
       if (!owned.ok) return { ok: false, errors: owned.errors };
       const decoded = decode(payload);
       if (!decoded.ok) return { ok: false, errors: decoded.errors };
+      if (decoded.value.op === 'init') return runInit(owned, decoded.value, sessionId);
+      if (owned.readOnly === true) {
+        return { ok: false, errors: [{ code: 'E_MAID_READONLY', message: '这个会话是只读的，不能改目录表。' }] };
+      }
 
       const loaded = await store.readCatalog(owned.root);
       if (loaded.state !== 'MANAGED') {
@@ -489,7 +721,7 @@ export function createManageSurface(options) {
   };
   // A thrown error must still be an answer: the card shows a message either way,
   // and an unanswered call reads to the user as a dead connection.
-  for (const name of ['pick', 'save']) {
+  for (const name of ['draft', 'pick', 'save']) {
     const method = service[name].bind(service);
     service[name] = async (...args) => {
       try {

@@ -360,6 +360,32 @@ export function createRoots(options) {
   };
 
   /**
+   * Drop the cached catalog for every entry on one root and load it again.
+   *
+   * `scanRoot` refreshes only the first entry it finds, so a session that just
+   * wrote the table through the card would otherwise keep the old projection
+   * until its own next tool call.
+   * @param {string} root - absolute controlled root.
+   * @returns {Promise<number>} how many entries were reloaded.
+   */
+  const reloadRoot = async (root) => {
+    const touched = [];
+    for (const entry of entries.values()) {
+      if (entry.root !== root) continue;
+      entry.catalogState = 'PENDING';
+      entry.catalog = undefined;
+      entry.errors = [];
+      entry.warnings = [];
+      touched.push(entry);
+    }
+    for (const entry of touched) {
+      await load(entry);
+      await project(entry, entry.lastScan);
+    }
+    return touched.length;
+  };
+
+  /**
    * Project the current state without scanning.
    * @param {object} entry - root entry.
    * @returns {Promise<void>} fulfillment after the write attempt.
@@ -400,6 +426,7 @@ export function createRoots(options) {
   return {
     acquire,
     scanRoot,
+    reloadRoot,
     forAgent,
     load,
     ready,

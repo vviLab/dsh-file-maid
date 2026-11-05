@@ -369,7 +369,7 @@ export function createTools(options) {
         const { entry, root } = entryFor(exec);
         if (entry === undefined || root === undefined) return failure('E_MAID_NO_ROOT', 'this session has no session.header.cwd');
         if (mode === 'interview' || mode === 'init') {
-          return failure('E_MAID_CARD_REQUIRED', 'initialization happens in the sidebar card; open 文件管家 and choose 开始设置');
+          return failure('E_MAID_CARD_REQUIRED', 'initialization happens in the sidebar card: open 文档妹抖, then use 启用这个根');
         }
         if (mode !== 'defer' && mode !== 'opt_out') {
           return failure('E_MAID_SCHEMA', 'mode must be one of interview, init, defer, opt_out');

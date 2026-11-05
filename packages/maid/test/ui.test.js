@@ -240,3 +240,50 @@ test('UI-37 every t() key is present in both dictionaries', async () => {
   }
   assert.deepEqual(missing, [], 'a key used by the renderer must exist in zh and en');
 });
+
+test('UI-40 an unset root renders the setup entry instead of an empty body', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const setupEntry = !viewsEnabled && embedded && state\.phase === 'ok' && catalogState === 'UNINITIALIZED'/u);
+  assert.match(body, /viewsEnabled \|\| !embedded \|\| setupLayer !== null/u, 'the body gate must let the setup layer through');
+});
+
+test('UI-41 the add button waits for a path, a purpose and a clean check', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const setupFormReady = setupPath !== '' && setupPurpose !== '' && setup\?\.problem == null && !setupDuplicate/u);
+  assert.match(body, /disabled: !setupFormReady/u);
+  assert.match(body, /'setup\.needFields'/u, 'the reason names the missing fields');
+});
+
+test('UI-42 a duplicate row is refused before any request', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const setupDuplicate = \(setup\?\.dirs \?\? \[\]\)\.some/u);
+  assert.match(body, /t\('setup\.dup'\)/u);
+});
+
+test('UI-43 the confirm screen lists the rows and states the promise', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const confirm = body.slice(body.indexOf("if (step === 'confirm')"), body.indexOf("if (step === 'form')"));
+  assert.match(confirm, /setupconfirmrow/u);
+  assert.match(confirm, /setup\.confirmPromise/u);
+  assert.match(confirm, /t\('setup\.write'\)/u);
+});
+
+test('UI-44 an existing table counts as success on the second attempt', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /if \(code === 'E_MAID_EXISTS'\)/u);
+  assert.match(body, /step: 'done'/u);
+});
+
+test('UI-45 the setup layer closes back into the directory view', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /setSetup\(undefined\);\n\s+setView\('dirs'\);/u);
+  assert.match(body, /setRevision\(\(count\) => count \+ 1\)/u);
+});
+
+test('UI-46 every setup hook in the renderer is also styled', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const produced = new Set([...body.matchAll(/'data-file-maid': '(setup[a-z]+)'/gu)].map((match) => match[1]));
+  const styled = new Set([...body.matchAll(/\[data-file-maid="(setup[a-z]+)"\]/gu)].map((match) => match[1]));
+  const unstyles = [...produced].filter((hook) => !styled.has(hook));
+  assert.deepEqual(unstyles, [], `hooks rendered without a rule: ${unstyles.join(', ')}`);
+});

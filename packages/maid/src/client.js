@@ -122,6 +122,7 @@ window.__ModuleLoader__.load({
       result: { mode: 'src-json' },
     });
     const MANAGE_DESCRIPTORS = [
+      descriptorOf('draft', ['root', 'sessionId', 'path']),
       descriptorOf('pick', ['root', 'sessionId']),
       descriptorOf('save', ['root', 'sessionId', 'payload']),
       descriptorOf('scan', ['root', 'sessionId']),
@@ -305,6 +306,50 @@ window.__ModuleLoader__.load({
         'init.discard': '放弃 {n} 项修改',
         'stat.dirs': '个目录',
         'more.show': '还有 {n} 个目录',
+        'setup.entry': '启用这个根',
+        'setup.lead': '这个根还没有目录表。',
+        'setup.detail': '添加目录后，文件会按用途自动归类。',
+        'setup.listTitle': '已添加的目录',
+        'setup.emptyTitle': '还没有目录',
+        'setup.emptyHint': '先添加一个目录，文件才会被归类。',
+        'setup.addTitle': '添加目录',
+        'setup.add': '添加目录',
+        'setup.ok': '添加',
+        'setup.cancel': '取消',
+        'setup.remove': '移除',
+        'setup.removeOf': '从列表移除 {path}，不会删除文件',
+        'setup.defaultOf': '把 {path} 设为默认落点',
+        'setup.defaultHint': '点左侧圆点选默认落点；判不出来的文件会进这里。',
+        'setup.needDefault': '还没有选默认落点',
+        'setup.needFields': '还需要填写：{fields}',
+        'setup.path': '路径',
+        'setup.purpose': '用途',
+        'setup.excludes': '排除',
+        'setup.pathPh': '例如 80-Outputs',
+        'setup.pathHint': '相对工作区根，最多 3 段。',
+        'setup.purposePh': '一句话说明这个目录收什么',
+        'setup.excludesPh': '一句话说明什么不该放这里（可空）',
+        'setup.dup': '这个目录已经加过了',
+        'setup.checkFailed': '没能检查这个路径，稍后再试。',
+        'setup.count': '{n} 个目录',
+        'setup.next': '下一步 · {n}',
+        'setup.confirmTitle': '确认启用',
+        'setup.confirmDefault': '默认落点：{path}',
+        'setup.confirmPromise': '不会移动或删除任何文件。',
+        'setup.write': '写入并启用',
+        'setup.back': '返回修改',
+        'setup.leave': '← 返回',
+        'setup.writing': '正在写入…',
+        'setup.scanning': '已写入，正在清点文件…',
+        'setup.done': '已启用 · {dirs} 个目录',
+        'setup.doneMeta': '{files} 个文件',
+        'setup.scanPending': '已启用，但还没清点文件；到扫描页重试。',
+        'setup.doneNote': '目录、日志、扫描已经可用。',
+        'setup.doneAction': '查看目录',
+        'setup.failed': '启用没有完成。',
+        'setup.retry': '重试',
+        'setup.errorKept': '已添加的 {n} 个目录还在，可以直接重试。',
+        'more.hide': '收起',
         'more.hide': '收起',
         'refresh': '刷新',
         'readonly': '只读视图 · 不改动任何配置',
@@ -484,6 +529,50 @@ window.__ModuleLoader__.load({
         'init.discard': 'Discard {n} changes',
         'stat.dirs': 'dirs',
         'more.show': '{n} more',
+        'setup.entry': 'Set up this root',
+        'setup.lead': 'This root has no folder table yet.',
+        'setup.detail': 'Add folders; files then route by purpose.',
+        'setup.listTitle': 'Folders added',
+        'setup.emptyTitle': 'No folders yet',
+        'setup.emptyHint': 'Add one folder and files start routing.',
+        'setup.addTitle': 'Add a folder',
+        'setup.add': 'Add folder',
+        'setup.ok': 'Add',
+        'setup.cancel': 'Cancel',
+        'setup.remove': 'Remove',
+        'setup.removeOf': 'Remove {path} from the list; files stay',
+        'setup.defaultOf': 'Make {path} the default',
+        'setup.defaultHint': 'Pick the default with the dot; files that cannot be placed go here.',
+        'setup.needDefault': 'No default folder chosen',
+        'setup.needFields': 'Still missing: {fields}',
+        'setup.path': 'path',
+        'setup.purpose': 'purpose',
+        'setup.excludes': 'excludes',
+        'setup.pathPh': 'e.g. 80-Outputs',
+        'setup.pathHint': 'Relative to the root, up to 3 segments.',
+        'setup.purposePh': 'one line: what belongs here',
+        'setup.excludesPh': 'one line on what does not belong; optional',
+        'setup.dup': 'Already added',
+        'setup.checkFailed': 'Could not check the path; try again.',
+        'setup.count': '{n} folders',
+        'setup.next': 'Next · {n}',
+        'setup.confirmTitle': 'Confirm',
+        'setup.confirmDefault': 'default: {path}',
+        'setup.confirmPromise': 'Nothing is moved or deleted.',
+        'setup.write': 'Write and enable',
+        'setup.back': 'Back',
+        'setup.leave': '← Back',
+        'setup.writing': 'Writing…',
+        'setup.scanning': 'Written; counting files…',
+        'setup.done': 'On · {dirs} folders',
+        'setup.doneMeta': '{files} files',
+        'setup.scanPending': 'Enabled, but files are not counted yet; retry on the Scan tab.',
+        'setup.doneNote': 'Directories, Log, and Scan are now available.',
+        'setup.doneAction': 'View folders',
+        'setup.failed': 'Setup did not finish.',
+        'setup.retry': 'Retry',
+        'setup.errorKept': 'The {n} folders are still here; retry.',
+        'more.hide': 'Collapse',
         'more.hide': 'less',
         'refresh': 'refresh',
         'readonly': 'read-only view · changes nothing',
@@ -1114,6 +1203,44 @@ window.__ModuleLoader__.load({
             '[data-file-maid="hint"]{color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.45;}',
             '[data-file-maid="hint"][data-tone="error"]{color:var(--dsw-alias-state-error-primary,#ef4444);}',
             '[data-file-maid="tablist"]{display:flex;flex-direction:column;}',
+            '[data-file-maid="setuplayer"]{display:flex;flex-direction:column;gap:8px;padding:2px 0 2px;}',
+            '[data-file-maid="setuphead"]{display:flex;align-items:center;gap:6px;min-width:0;}',
+            '[data-file-maid="setupback"]{flex:none;padding:2px 4px;border:0;background:none;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-row);line-height:1.4;cursor:pointer;border-radius:4px;}',
+            '[data-file-maid="setupback"]:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="setuptitle"]{flex:1 1 auto;min-width:0;color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-row);font-weight:600;line-height:1.35;}',
+            '[data-file-maid="setupcount"]{flex:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);font-variant-numeric:tabular-nums;}',
+            '[data-file-maid="setuplead"]{color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-row);line-height:1.45;}',
+            '[data-file-maid="setupnote"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.45;}',
+            '[data-file-maid="setupcta"]{flex:1 1 auto;min-height:28px;padding:0 10px;border:0;border-radius:6px;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-1);font:inherit;font-size:11px;line-height:1.3;cursor:pointer;}',
+            '[data-file-maid="setupcta"]:disabled{opacity:.5;cursor:default;}',
+            '[data-file-maid="setupcta"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}',
+            '[data-file-maid="setupsecondary"]{flex:none;min-height:28px;padding:0 10px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:none;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;}',
+            '[data-file-maid="setupsecondary"]:hover:not(:disabled){color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="setupsecondary"]:disabled{opacity:.5;cursor:default;}',
+            '[data-file-maid="setupactions"]{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px;}',
+            '[data-file-maid="setuplist"]{display:flex;flex-direction:column;min-width:0;}',
+            '[data-file-maid="setuprow"]{display:flex;align-items:center;gap:6px;min-height:34px;border-top:1px solid var(--dsw-alias-border-l1);}',
+            '[data-file-maid="setuprow"]:first-child{border-top:0;}',
+            '[data-file-maid="setuprowmain"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 auto;min-width:0;padding:4px 0;cursor:pointer;}',
+            '[data-file-maid="setupradio"]{flex:none;width:14px;height:14px;margin:0;accent-color:var(--dsw-alias-brand-primary);}',
+            '[data-file-maid="setuppath"]{flex:1 1 100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-row);line-height:1.45;}',
+            '[data-file-maid="setuppurpose"]{flex:1 1 100%;min-width:0;padding-left:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="setupremove"]{flex:none;min-width:24px;min-height:24px;padding:0 2px;border:0;background:none;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-meta);cursor:pointer;border-radius:4px;}',
+            '[data-file-maid="setupremove"]:hover{color:var(--dsw-alias-state-error-primary);background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="setupdefaulthint"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="setupfield"]{display:flex;flex-direction:column;gap:4px;min-width:0;}',
+            '[data-file-maid="setuplabel"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="setupinput"]{min-height:28px;padding:0 8px;border:1px solid var(--dsw-alias-label-tertiary);border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:var(--maid-fs-row);}',
+            '[data-file-maid="setupinput"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+            '[data-file-maid="setuphint"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="setupproblem"]{color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-meta);line-height:1.4;border-left:2px solid var(--dsw-alias-state-error-primary);padding-left:6px;}',
+            '[data-file-maid="setuperror"]{color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-meta);line-height:1.45;border-left:2px solid var(--dsw-alias-state-error-primary);padding-left:6px;}',
+            '[data-file-maid="setupconfirmlist"]{display:flex;flex-direction:column;min-width:0;}',
+            '[data-file-maid="setupconfirmrow"]{display:flex;align-items:center;gap:6px;min-width:0;padding:2px 0;}',
+            '[data-file-maid="setupdot"]{flex:none;color:var(--dsw-alias-brand-primary);font-size:var(--maid-fs-meta);line-height:1;}',
+            '[data-file-maid="setuppromise"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.45;}',
+            '[data-file-maid="setupdonemeta"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.45;}',
+            '[data-file-maid="setupstatus"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
             '[data-file-maid="tabrow"]{display:flex;flex-direction:column;min-width:0;border-top:1px solid var(--dsw-alias-border-l1);}',
             '[data-file-maid="tabrow"]:first-child{border-top:0;}',
             '[data-file-maid="rowhead"]{display:flex;align-items:center;gap:6px;min-width:0;}',
@@ -1381,6 +1508,9 @@ window.__ModuleLoader__.load({
           /** Which directory shows its purpose in full, and which one is clamped. */
           const [purposeOpen, setPurposeOpen] = React.useState('');
           const [clippedDir, setClippedDir] = React.useState('');
+
+          /** The setup layer: undefined while browsing, an object while setting up. */
+          const [setup, setSetup] = React.useState(undefined);
           React.useEffect(() => {
             // A clamped purpose only earns a "展开" control when it really overflows:
             // the card width is variable, so the answer has to come from the DOM.
@@ -2833,8 +2963,291 @@ window.__ModuleLoader__.load({
            * show and the reason already sits on the hint line. The wide page keeps it: there
            * the reason lives in the banner, so the section still needs its slot.
            */
+          /* ---- setup layer: turn a root without a table into a routable one ---- */
+          const setupEntry = !viewsEnabled && embedded && state.phase === 'ok' && catalogState === 'UNINITIALIZED';
+          const setupBlank = {
+            step: 'list',
+            dirs: [],
+            rootDefault: '',
+            draft: { path: '', purpose: '', excludes: '' },
+            problem: null,
+            checking: false,
+            error: null,
+            scan: null,
+          };
+          const beginSetup = () => setSetup({ ...setupBlank });
+          const setupPatch = (patch) => setSetup((current) => ({ ...(current ?? setupBlank), ...patch }));
+          const setupForm = setup?.draft ?? { path: '', purpose: '', excludes: '' };
+          const setupPath = setupForm.path.trim();
+          const setupPurpose = setupForm.purpose.trim();
+          const setupDuplicate = (setup?.dirs ?? []).some((dir) => dir.path === setupPath.replace(/\\+/gu, '/').replace(/\/+$/u, ''));
+          const setupFormReady = setupPath !== '' && setupPurpose !== '' && setup?.problem == null && !setupDuplicate;
+          const setupFormHint = setupFormReady
+            ? ''
+            : fill(t('setup.needFields'), {
+                fields: [
+                  setupPath === '' ? t('setup.path') : '',
+                  setupPurpose === '' ? t('setup.purpose') : '',
+                ].filter((item) => item !== '').join('、'),
+              });
+          const checkSetupPath = async () => {
+            const value = setupPath;
+            if (value === '') {
+              setupPatch({ problem: null, checking: false });
+              return;
+            }
+            setupPatch({ checking: true });
+            const result = await callRemote('draft', root, readerId, value);
+            if (result?.ok !== true) {
+              setupPatch({ checking: false, problem: describeError(result, t('setup.checkFailed')) });
+              return;
+            }
+            setupPatch({ checking: false, problem: result.value?.path?.problem ?? null });
+          };
+          const addSetupRow = () => {
+            if (!setupFormReady) return;
+            const relative = setupPath.replace(/\\+/gu, '/').replace(/\/+$/u, '');
+            const next = [...(setup?.dirs ?? []), { path: relative, purpose: setupPurpose, excludes: setupForm.excludes.trim() }];
+            setupPatch({
+              dirs: next,
+              rootDefault: setup?.rootDefault === '' ? relative : (setup.rootDefault ?? ''),
+              draft: { path: '', purpose: '', excludes: '' },
+              problem: null,
+            });
+          };
+          const removeSetupRow = (path) => {
+            const next = (setup?.dirs ?? []).filter((dir) => dir.path !== path);
+            setupPatch({ dirs: next, rootDefault: setup?.rootDefault === path ? '' : (setup?.rootDefault ?? '') });
+          };
+          const writeSetup = async () => {
+            setupPatch({ step: 'writing', error: null });
+            const body = JSON.stringify({ op: 'init', dirs: setup?.dirs ?? [], rootDefault: setup?.rootDefault ?? '' });
+            const result = await callRemote('save', root, readerId, body);
+            if (result?.ok === true) {
+              const value = result.value ?? {};
+              setSetup((current) => ({ ...(current ?? setupBlank), step: 'done', scan: value.scan ?? null }));
+              setRevision((count) => count + 1);
+              return;
+            }
+            const code = result?.errors?.[0]?.code ?? '';
+            if (code === 'E_MAID_EXISTS') {
+              // Somebody finished the same root meanwhile: show the finished state.
+              setSetup((current) => ({ ...(current ?? setupBlank), step: 'done', scan: null }));
+              setRevision((count) => count + 1);
+              return;
+            }
+            setupPatch({ step: 'failed', error: describeError(result, t('setup.failed')) });
+          };
+          const setupBack = (target) => () => {
+            if (target === 'close') {
+              setSetup(undefined);
+              return;
+            }
+            setupPatch({ step: target, error: null });
+          };
+          const setupLayer = (() => {
+            if (setup === undefined) {
+              if (!setupEntry) return null;
+              return h(
+                'div',
+                { 'data-file-maid': 'setuplayer' },
+                h('div', { 'data-file-maid': 'setuplead' }, t('setup.lead')),
+                h('div', { 'data-file-maid': 'setupnote' }, t('setup.detail')),
+                h(
+                  'button',
+                  { type: 'button', 'data-file-maid': 'setupcta', onClick: beginSetup },
+                  t('setup.entry'),
+                ),
+              );
+            }
+            const step = setup.step;
+            const back = (target) =>
+              h(
+                'button',
+                { type: 'button', 'data-file-maid': 'setupback', onClick: setupBack(target) },
+                t('setup.leave'),
+              );
+            const actions = (...children) => h('div', { 'data-file-maid': 'setupactions' }, ...children);
+            if (step === 'done') {
+              const scan = setup.scan;
+              return h(
+                'div',
+                { 'data-file-maid': 'setuplayer' },
+                h('div', { 'data-file-maid': 'setuptitle' }, fill(t('setup.done'), { dirs: setup.dirs.length })),
+                h(
+                  'div',
+                  { 'data-file-maid': 'setupdonemeta' },
+                  scan === null || scan === undefined
+                    ? t('setup.scanPending')
+                    : fill(t('setup.doneMeta'), { files: fileCount(scan.files) }),
+                ),
+                h('div', { 'data-file-maid': 'setupnote' }, t('setup.doneNote')),
+                actions(
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      'data-file-maid': 'setupcta',
+                      onClick: () => {
+                        setSetup(undefined);
+                        setView('dirs');
+                        setRevision((count) => count + 1);
+                      },
+                    },
+                    t('setup.doneAction'),
+                  ),
+                ),
+              );
+            }
+            if (step === 'failed') {
+              return h(
+                'div',
+                { 'data-file-maid': 'setuplayer' },
+                h('div', { 'data-file-maid': 'setuptitle' }, t('setup.failed')),
+                h('div', { 'data-file-maid': 'setuperror' }, setup.error ?? ''),
+                h('div', { 'data-file-maid': 'setupnote' }, fill(t('setup.errorKept'), { n: setup.dirs.length })),
+                actions(
+                  h('button', { type: 'button', 'data-file-maid': 'setupcta', onClick: () => writeSetup() }, t('setup.retry')),
+                  h('button', { type: 'button', 'data-file-maid': 'setupsecondary', onClick: setupBack('confirm') }, t('setup.back')),
+                ),
+              );
+            }
+            if (step === 'writing') {
+              return h(
+                'div',
+                { 'data-file-maid': 'setuplayer', 'aria-busy': 'true' },
+                h('div', { 'data-file-maid': 'setuptitle' }, t('setup.writing')),
+                h('div', { 'data-file-maid': 'setuppromise' }, t('setup.confirmPromise')),
+                h('div', { 'data-file-maid': 'setupstatus', 'aria-live': 'polite' }, t('setup.scanning')),
+              );
+            }
+            if (step === 'confirm') {
+              const missingDefault = setup.rootDefault === '';
+              return h(
+                'div',
+                { 'data-file-maid': 'setuplayer' },
+                h('div', { 'data-file-maid': 'setuphead' }, back('list'), h('span', { 'data-file-maid': 'setuptitle' }, t('setup.confirmTitle'))),
+                h('div', { 'data-file-maid': 'setupcount' }, fill(t('setup.count'), { n: setup.dirs.length })),
+                h(
+                  'div',
+                  { 'data-file-maid': 'setupconfirmlist' },
+                  ...setup.dirs.map((dir) =>
+                    h(
+                      'div',
+                      { key: `c-${dir.path}`, 'data-file-maid': 'setupconfirmrow' },
+                      dir.path === setup.rootDefault ? h('span', { 'data-file-maid': 'setupdot', 'aria-hidden': 'true' }, '●') : null,
+                      h('span', { 'data-file-maid': 'mono' }, dir.path),
+                    ),
+                  ),
+                ),
+                h('div', { 'data-file-maid': 'setupnote' }, fill(t('setup.confirmDefault'), { path: setup.rootDefault })),
+                h('div', { 'data-file-maid': 'setuppromise' }, t('setup.confirmPromise')),
+                missingDefault ? h('div', { 'data-file-maid': 'setuperror' }, t('setup.needDefault')) : null,
+                actions(
+                  h('button', { type: 'button', 'data-file-maid': 'setupcta', disabled: missingDefault, onClick: () => writeSetup() }, t('setup.write')),
+                ),
+              );
+            }
+            if (step === 'form') {
+              const field = (key, label, placeholder) =>
+                h(
+                  'label',
+                  { 'data-file-maid': 'setupfield' },
+                  h('span', { 'data-file-maid': 'setuplabel' }, label, label.startsWith(t('setup.purpose')) || label.startsWith(t('setup.path')) ? h('span', { 'data-file-maid': 'required' }, ' *') : null),
+                  h('input', {
+                    type: 'text',
+                    'data-file-maid': 'setupinput',
+                    'aria-label': label,
+                    placeholder,
+                    value: setupForm[key],
+                    onChange: (event) => setupPatch({ draft: { ...setupForm, [key]: event.target.value } }),
+                    onBlur: key === 'path' ? () => void checkSetupPath() : undefined,
+                  }),
+                );
+              return h(
+                'div',
+                { 'data-file-maid': 'setuplayer' },
+                h('div', { 'data-file-maid': 'setuphead' }, back('list'), h('span', { 'data-file-maid': 'setuptitle' }, t('setup.addTitle'))),
+                field('path', t('setup.path'), t('setup.pathPh')),
+                setup.problem === null
+                  ? h('div', { 'data-file-maid': 'setuphint' }, t('setup.pathHint'))
+                  : h('div', { 'data-file-maid': 'setupproblem', role: 'status' }, setup.problem),
+                setupDuplicate ? h('div', { 'data-file-maid': 'setupproblem' }, t('setup.dup')) : null,
+                field('purpose', t('setup.purpose'), t('setup.purposePh')),
+                field('excludes', t('setup.excludes'), t('setup.excludesPh')),
+                actions(
+                  setupFormHint === '' ? null : h('div', { 'data-file-maid': 'setuphint' }, setupFormHint),
+                  h('button', { type: 'button', 'data-file-maid': 'setupcta', disabled: !setupFormReady, onClick: addSetupRow }, t('setup.ok')),
+                  h('button', { type: 'button', 'data-file-maid': 'setupsecondary', onClick: setupBack('list') }, t('setup.cancel')),
+                ),
+              );
+            }
+            // list
+            return h(
+              'div',
+              { 'data-file-maid': 'setuplayer' },
+              h(
+                'div',
+                { 'data-file-maid': 'setuphead' },
+                back('close'),
+                h('span', { 'data-file-maid': 'setuptitle' }, t('setup.listTitle')),
+                h('span', { 'data-file-maid': 'setupcount' }, fill(t('setup.count'), { n: setup.dirs.length })),
+              ),
+              setup.dirs.length === 0
+                ? h(
+                    'div',
+                    null,
+                    h('div', { 'data-file-maid': 'setuplead' }, t('setup.emptyTitle')),
+                    h('div', { 'data-file-maid': 'setupnote' }, t('setup.emptyHint')),
+                  )
+                : h(
+                    'div',
+                    { 'data-file-maid': 'setuplist', role: 'list' },
+                    ...setup.dirs.map((dir) =>
+                      h(
+                        'div',
+                        { key: `r-${dir.path}`, 'data-file-maid': 'setuprow', role: 'listitem' },
+                        h(
+                          'label',
+                          { 'data-file-maid': 'setuprowmain' },
+                          h('input', {
+                            type: 'radio',
+                            name: 'file-maid-default',
+                            'data-file-maid': 'setupradio',
+                            checked: setup.rootDefault === dir.path,
+                            'aria-label': fill(t('setup.defaultOf'), { path: dir.path }),
+                            onChange: () => setupPatch({ rootDefault: dir.path }),
+                          }),
+                          h('span', { 'data-file-maid': 'setuppath' }, dir.path),
+                          h('span', { 'data-file-maid': 'setuppurpose' }, dir.purpose),
+                        ),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            'data-file-maid': 'setupremove',
+                            'aria-label': fill(t('setup.removeOf'), { path: dir.path }),
+                            onClick: () => removeSetupRow(dir.path),
+                          },
+                          t('setup.remove'),
+                        ),
+                      ),
+                    ),
+                  ),
+              setup.dirs.length === 0
+                ? null
+                : h('div', { 'data-file-maid': 'setupdefaulthint' }, setup.rootDefault === '' ? t('setup.needDefault') : t('setup.defaultHint')),
+              actions(
+                h('button', { type: 'button', 'data-file-maid': 'setupcta', onClick: setupBack('form') }, t('setup.add')),
+                setup.dirs.length === 0
+                  ? null
+                  : h('button', { type: 'button', 'data-file-maid': 'setupsecondary', disabled: setup.rootDefault === '', onClick: setupBack('confirm') }, fill(t('setup.next'), { n: setup.dirs.length })),
+              ),
+            );
+          })();
+
           const bodyBlock =
-            viewsEnabled || !embedded
+            viewsEnabled || !embedded || setupLayer !== null
               ? h(
                   'div',
                   {
@@ -2843,7 +3256,9 @@ window.__ModuleLoader__.load({
                     role: 'tabpanel',
                     'aria-label': t(`view.${shownView}`),
                   },
-                  shownView === 'dirs'
+                  setupLayer !== null
+                    ? setupLayer
+                    : shownView === 'dirs'
                     ? bodyNode
                     : shownView === 'scan'
                       ? scanBody
