@@ -26,7 +26,7 @@ const AGENTS_MD = `# 工作区
 | \`70-Downloads\` | EXTERNAL_LINK | 系统下载目录入口 |
 | \`80-Outputs\` | MANAGED | 非项目输出物的默认落点 |
 
-默认落点：\`80-Outputs\`
+没命中时放这里：\`80-Outputs\`
 `;
 
 test('an absent .maid reports UNINITIALIZED', async (t) => {

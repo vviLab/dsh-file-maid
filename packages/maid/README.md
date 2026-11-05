@@ -83,7 +83,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | 路由 | `status.routes[]`：最近的落点判定与依据 |
 | 扫描 | 本次扫描、对账（新增 / 插件通道 / 差额）、根与基线 |
 
-「目录」页签带一个目录管理器：新建、编辑、删除三个动作，字段是路径 / 用途 / 排除（可空）。写入走三个 Host 端点 `fileMaid/pick`、`fileMaid/save` 与 `fileMaid/scan`：
+「目录」页签带一个目录管理器：新建、编辑、删除三个动作，编辑时勾「没命中规则时，文件放这里」即可把它设成判断不出来时归入的目录（`makeDefault: true`），字段是路径 / 用途 / 排除（可空）。写入走四个 Host 端点 `fileMaid/draft`（只校验一条待添加路径）、`fileMaid/pick`、`fileMaid/save` 与 `fileMaid/scan`：
 
 | 动作 | 行为 |
 | --- | --- |
@@ -156,7 +156,7 @@ FILE_MAID:MAID_LOCKED:<LEXICAL|INODE|UNVERIFIED> <说明>
 ## 验证
 
 ```bash
-node --test test/*.test.js         # 175 条单元、集成与渲染用例
+node --test test/*.test.js         # 181 条单元、集成与渲染用例
 node scripts/check-manifest.js     # manifest、补丁、依赖与分层自检
 node scripts/cli.js route --root <dir> --name report.md --intent 报告
 node scripts/cli.js migrate --root <dir>   # v3 catalog → v5，原文件留作 catalog.yml.v3.bak

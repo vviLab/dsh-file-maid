@@ -73,7 +73,7 @@ export function renderPrompt(catalog) {
     '| 目录 | 收什么 | 排除 |',
     '| --- | --- | --- |',
   ];
-  const tail = ['', `默认落点：${cell(catalog.rootDefault, 24)}`, '', '规则：', ...RULES.map((rule, index) => `${index + 1}. ${rule}`)];
+  const tail = ['', `没命中时放这里：${cell(catalog.rootDefault, 24)}`, '', '规则：', ...RULES.map((rule, index) => `${index + 1}. ${rule}`)];
 
   const assemble = (rows, withExcludes) => [...head, ...rows.map((dir) => row(dir, withExcludes)), ...tail].join('\n');
 

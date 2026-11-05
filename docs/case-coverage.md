@@ -141,6 +141,7 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-59 | UI-59 a log row expands to name its full path | `ui.test.js` |
 | UI-60 | UI-60 the expanded log row labels its facts and prints a stable local stamp | `ui.test.js` |
 | UI-61 | UI-61 the expanded directory block labels its facts and drops the duplicate path | `ui.test.js` |
+| UI-62 | UI-62 the landed figure names its window, not just a bare number | `ui.test.js` |
 
 ## 未启用根的启用流程
 
@@ -192,3 +193,15 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | RD-05 | RD-05 helpers used while building the rows are declared before the rows | `render.test.js` |
 | RD-06 | RD-06 the directory rows, the table rows and the ledger all render with data | `render-data.test.js` |
 | RD-07 | RD-07 switching to the scan page renders its accounts from the snapshot | `render-data.test.js` |
+
+## 目录默认落点
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| M-46 | M-46 the default directory can be pointed at another row | `manage.test.js` |
+| M-47 | M-47 a default pointing at an undeclared folder is refused | `manage.test.js` |
+| UI-63 | UI-63 every row except the default one offers a one-click default | `ui.test.js` |
+
+| UI-64 | UI-64 the card keeps itself current without a refresh button | `ui.test.js` |
+
+| UI-65 | UI-65 the badge bubble only appears when it says something new | `ui.test.js` |

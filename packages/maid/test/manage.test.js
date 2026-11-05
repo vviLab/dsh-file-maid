@@ -76,7 +76,8 @@ test('M-04 removing the default output is refused', async (t) => {
   t.after(() => rm(root, { recursive: true, force: true }));
   const result = await surface.service.save(root, sessionId, JSON.stringify({ op: 'remove', path: '80-Outputs' }));
   assert.equal(result.ok, false);
-  assert.match(result.errors[0].message, /默认落点/u);
+  // The message has to say what to do, in words that do not need a glossary.
+  assert.match(result.errors[0].message, /没命中时放这里/u);
 });
 
 test('M-05 removing another directory keeps its files and reprojects', async (t) => {
@@ -281,4 +282,36 @@ test('M-19 a directory with an empty purpose can be given one', async (t) => {
   assert.equal(result.ok, true, JSON.stringify(result));
   const loaded = await store.readCatalog(root);
   assert.equal(loaded.catalog.dirs.find((dir) => dir.path === '00-Specs').purpose, '历史归档');
+});
+
+test('M-46 a row can be made the fallback while it is being edited', async (t) => {
+  const { root, sessionId, surface } = await makeRoot();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const before = await store.readCatalog(root);
+  const other = before.catalog.dirs.find((dir) => dir.path !== before.catalog.rootDefault);
+  const result = await surface.service.save(
+    root,
+    sessionId,
+    JSON.stringify({ op: 'update', path: other.path, purpose: other.purpose, excludes: other.excludes ?? '', makeDefault: true }),
+  );
+  assert.equal(result.ok, true, JSON.stringify(result));
+  const after = await store.readCatalog(root);
+  assert.equal(after.catalog.rootDefault, other.path, 'the catalog points at the chosen row');
+  const yaml = await readFile(join(root, '.maid', 'catalog.yml'), 'utf8');
+  assert.match(yaml, new RegExp(`root_default:\\s*${other.path}`, 'u'));
+});
+
+test('M-47 an edit that does not ask for the fallback leaves it alone', async (t) => {
+  const { root, sessionId, surface } = await makeRoot();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const before = await store.readCatalog(root);
+  const other = before.catalog.dirs.find((dir) => dir.path !== before.catalog.rootDefault);
+  const result = await surface.service.save(
+    root,
+    sessionId,
+    JSON.stringify({ op: 'update', path: other.path, purpose: '改过的用途', excludes: '' }),
+  );
+  assert.equal(result.ok, true, JSON.stringify(result));
+  const after = await store.readCatalog(root);
+  assert.equal(after.catalog.rootDefault, before.catalog.rootDefault, 'saving a row does not move the fallback by accident');
 });

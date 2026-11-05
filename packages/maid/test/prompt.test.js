@@ -13,7 +13,7 @@ test('PR-01 the section names every directory and the five rules', () => {
   for (const path of ['00-Specs', '10-Projects', '30-Media', '80-Outputs']) assert.ok(text.includes(path), path);
   assert.match(text, /maid_put/u);
   assert.match(text, /不要用 `write` 新建/u);
-  assert.match(text, /默认落点：80-Outputs/u);
+  assert.match(text, /没命中时放这里：80-Outputs/u);
   assert.equal(text.split('\n').filter((line) => /^\d\. /u.test(line)).length, 5);
 });
 

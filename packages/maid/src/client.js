@@ -153,7 +153,7 @@ window.__ModuleLoader__.load({
         'role.managed': '受管目录',
         'role.autonomous': '自管目录',
         'label.uninitialized': '还没启用；让 AI 整理一次文件后开启。',
-        'label.default': '默认落点',
+        'label.default': '没命中时放这里',
         'label.scan': '最近扫描',
         'label.threshold': '阈值',
         'label.degraded': '已降级',
@@ -228,11 +228,14 @@ window.__ModuleLoader__.load({
         'detail.purposeLess': '收起',
         'dir.row': '{path}，{files} 个文件',
         'dir.purposeLabel': '用途',
-        'detail.landedLabel': '落点',
-        'detail.landedCount': '{n} 个',
+        'detail.landedLabel': '近期落点',
+        'detail.landedCount': '{n} / {total} 条',
+        'manage.fallback': '没命中规则时，文件放这里',
+        'manage.fallbackHint': '勾上后，判断不出来的文件都会进这个目录',
+        'manage.fallbackCurrent': '现在就是这样',
         'manage.editOf': '编辑 {path}',
         'manage.deleteOf': '删除 {path}',
-        'detail.default': '默认落点',
+        'detail.default': '没命中时放这里',
         'misplaced.empty': '没有记录',
         'misplaced.emptyHint': '最近的落点判定与依据会记在这里。',
         'misplaced.into': '落点',
@@ -265,7 +268,7 @@ window.__ModuleLoader__.load({
         'init.skip': '不登记',
         'init.registerAutonomous': '登记为自管',
         'init.registerManaged': '登记为受管',
-        'init.output': '默认落点',
+        'init.output': '没命中时放这里',
         'init.more': '更多选项',
         'init.less': '收起选项',
         'init.customPlaceholder': '每行一条：路径:角色:用途:关键词1,关键词2',
@@ -325,9 +328,9 @@ window.__ModuleLoader__.load({
         'setup.cancel': '取消',
         'setup.remove': '移除',
         'setup.removeOf': '从列表移除 {path}，不会删除文件',
-        'setup.defaultOf': '把 {path} 设为默认落点',
-        'setup.defaultHint': '点左侧圆点选默认落点；判不出来的文件会进这里。',
-        'setup.needDefault': '还没有选默认落点',
+        'setup.defaultOf': '把 {path} 设成没命中时放的位置',
+        'setup.defaultHint': '没命中规则、也没指定目录时，文件放这里。',
+        'setup.needDefault': '还没选没命中时放哪里',
         'setup.needFields': '还需要填写：{fields}',
         'setup.path': '路径',
         'setup.purpose': '用途',
@@ -341,7 +344,7 @@ window.__ModuleLoader__.load({
         'setup.count': '{n} 个目录',
         'setup.next': '下一步 · {n}',
         'setup.confirmTitle': '确认启用',
-        'setup.confirmDefault': '默认落点：{path}',
+        'setup.confirmDefault': '没命中时放这里：{path}',
         'setup.confirmPromise': '不会移动或删除任何文件。',
         'setup.write': '写入并启用',
         'setup.back': '返回修改',
@@ -458,11 +461,14 @@ window.__ModuleLoader__.load({
         'detail.purposeLess': 'less',
         'dir.row': '{path}, {files} files',
         'dir.purposeLabel': 'Purpose',
-        'detail.landedLabel': 'Landed',
-        'detail.landedCount': '{n}',
+        'detail.landedLabel': 'Recent',
+        'detail.landedCount': '{n} of {total}',
+        'manage.fallback': 'When no rule matches, files go here',
+        'manage.fallbackHint': 'Everything that cannot be placed lands in this folder',
+        'manage.fallbackCurrent': 'That is how it works now',
         'manage.editOf': 'Edit {path}',
         'manage.deleteOf': 'Delete {path}',
-        'detail.default': 'default dir',
+        'detail.default': 'fallback folder',
         'misplaced.empty': 'none recorded',
         'misplaced.emptyHint': 'Recent placement decisions and their reasons are listed here.',
         'misplaced.into': 'into',
@@ -495,7 +501,7 @@ window.__ModuleLoader__.load({
         'init.skip': 'skip',
         'init.registerAutonomous': 'register self-managed',
         'init.registerManaged': 'register managed',
-        'init.output': 'default dir',
+        'init.output': 'fallback folder',
         'init.more': 'more options',
         'init.less': 'fewer options',
         'init.customPlaceholder': 'one per line: path:role:purpose:kw1,kw2',
@@ -555,9 +561,9 @@ window.__ModuleLoader__.load({
         'setup.cancel': 'Cancel',
         'setup.remove': 'Remove',
         'setup.removeOf': 'Remove {path} from the list; files stay',
-        'setup.defaultOf': 'Make {path} the default',
-        'setup.defaultHint': 'Pick the default with the dot; files that cannot be placed go here.',
-        'setup.needDefault': 'No default folder chosen',
+        'setup.defaultOf': 'Make {path} the fallback folder',
+        'setup.defaultHint': 'Files with no matching rule and no named folder land here.',
+        'setup.needDefault': 'No fallback folder chosen',
         'setup.needFields': 'Still missing: {fields}',
         'setup.path': 'path',
         'setup.purpose': 'purpose',
@@ -571,7 +577,7 @@ window.__ModuleLoader__.load({
         'setup.count': '{n} folders',
         'setup.next': 'Next · {n}',
         'setup.confirmTitle': 'Confirm',
-        'setup.confirmDefault': 'default: {path}',
+        'setup.confirmDefault': 'fallback: {path}',
         'setup.confirmPromise': 'Nothing is moved or deleted.',
         'setup.write': 'Write and enable',
         'setup.back': 'Back',
@@ -1022,7 +1028,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="item"] [data-file-maid="chevron"]{flex:0 0 auto;width:10px;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));font-size:var(--maid-fs-meta);}',
             '[data-file-maid="itemdetail"]{display:flex;flex-direction:column;gap:1px;padding:2px 0 4px 18px;}',
             '[data-file-maid="itemfact"]{display:flex;align-items:baseline;gap:8px;min-width:0;}',
-            '[data-file-maid="itemfactlabel"]{flex:0 0 32px;white-space:nowrap;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));font-size:var(--maid-fs-meta);line-height:1.45;}',
+            '[data-file-maid="itemfactlabel"]{flex:0 0 44px;white-space:nowrap;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));font-size:var(--maid-fs-meta);line-height:1.45;}',
             '[data-file-maid="itemstamp"]{flex:1 1 auto;min-width:0;font-size:var(--maid-fs-meta);line-height:1.45;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;}',
             '[data-file-maid="item"]:first-child{border-top:0;}',
             '[data-file-maid="itemhead"]{display:flex;align-items:baseline;gap:8px;min-width:0;overflow:hidden;min-height:20px;}',
@@ -1256,6 +1262,8 @@ window.__ModuleLoader__.load({
             '[data-file-maid="morebarlabel"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '[data-file-maid="morebarglyph"]{flex:0 0 auto;opacity:.7;}',
             '[data-file-maid="rowflag"]{flex:0 0 auto;padding-left:6px;border-left:2px solid var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-label-primary);}',
+            '[data-file-maid="check"]{flex:0 0 auto;width:14px;height:14px;margin:0 4px 0 0;accent-color:var(--dsw-alias-brand-primary);}',
+            '[data-file-maid="rowerror"]{margin:2px 0 0;color:var(--dsw-alias-state-error-primary,#e5484d);font-size:var(--maid-fs-meta);line-height:1.4;}',
             '[data-file-maid="ghostbutton"]{display:inline-flex;align-items:center;flex:0 0 auto;padding:0 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:24px;cursor:pointer;white-space:nowrap;}',
             '[data-file-maid="ghostbutton"]:hover{background:var(--dsw-alias-interactive-bg-hover);}',
             '[data-file-maid="ghostbutton"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
@@ -1311,6 +1319,8 @@ window.__ModuleLoader__.load({
           const [manage, setManage] = React.useState(undefined);
           const [manageBusy, setManageBusy] = React.useState(false);
           const [manageError, setManageError] = React.useState('');
+          /** A failure from an action that has no form to show it in. */
+          const [dirError, setDirError] = React.useState('');
           /** Locale revisions: the card renders outside any slot outlet, so it subscribes itself. */
           const [localeRev, setLocaleRev] = React.useState(0);
           /** Wall clock for every relative age; a frozen `Date.now()` never leaves "4 分钟前". */
@@ -1508,6 +1518,27 @@ window.__ModuleLoader__.load({
 
           /** The setup layer: undefined while browsing, an object while setting up. */
           const [setup, setSetup] = React.useState(undefined);
+          React.useEffect(() => {
+            // `status.json` can change while this card is in the background: another
+            // window, a CLI scan, or a hand-edited catalog. Re-reading on focus means
+            // the reader never has to remember a manual refresh.
+            if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+            const reread = () => {
+              if (document.visibilityState === 'hidden') return;
+              setRevision((value) => value + 1);
+            };
+            window.addEventListener('focus', reread);
+            document.addEventListener('visibilitychange', reread);
+            // Focus alone misses a change made while the card is visible (a CLI scan,
+            // another session writing). A slow read of one small file covers that.
+            const timer = setInterval(reread, 15000);
+            return () => {
+              window.removeEventListener('focus', reread);
+              document.removeEventListener('visibilitychange', reread);
+              clearInterval(timer);
+            };
+          }, []);
+
           React.useEffect(() => {
             // A clamped purpose only earns a "展开" control when it really overflows:
             // the card width is variable, so the answer has to come from the DOM.
@@ -1725,7 +1756,7 @@ window.__ModuleLoader__.load({
                     },
                     h('span', { 'aria-hidden': 'true' }, isOpen ? '▾' : '▸'),
                     h('span', { 'data-file-maid': 'cell', title: dir.path }, dir.path),
-                    dir.path === catalog?.rootDefault ? h('span', { 'data-file-maid': 'star', title: t('detail.default') }, '★') : null,
+                    dir.path === catalog?.rootDefault ? h('span', { 'data-file-maid': 'star', 'aria-hidden': 'true' }, '★') : null,
                   ),
                 ),
                 h('td', { 'data-file-maid': 'td', 'data-align': 'num' }, fileCount(dir.files)),
@@ -1903,7 +1934,7 @@ window.__ModuleLoader__.load({
                           h(
                             'span',
                             { 'data-file-maid': 'rowflag', 'data-tone': 'warn' },
-                            fill(t('detail.landedCount'), { n: into.length }),
+                            fill(t('detail.landedCount'), { n: into.length, total: misplaced.length }),
                           ),
                         ),
                   )
@@ -2358,6 +2389,7 @@ window.__ModuleLoader__.load({
               path: dir?.path ?? '',
               purpose: dir?.about ?? '',
               excludes: typeof dir?.excludes === 'string' ? dir.excludes : '',
+              makeDefault: mode === 'edit' && dir?.path === catalog?.rootDefault,
             });
           };
 
@@ -2376,6 +2408,7 @@ window.__ModuleLoader__.load({
                   path: (manage?.path ?? '').trim(),
                   purpose: manage?.purpose ?? '',
                   excludes: manage?.excludes ?? '',
+                  makeDefault: manage?.makeDefault === true,
                 };
             setManageBusy(true);
             setManageError('');
@@ -2508,6 +2541,30 @@ window.__ModuleLoader__.load({
                     onChange: (event) => setManage({ ...manage, excludes: event.target.value }),
                   }),
                 ),
+                manage.mode === 'edit'
+                  ? h(
+                      'div',
+                      { 'data-file-maid': 'managerow' },
+                      h(
+                        'label',
+                        { 'data-file-maid': 'muted', htmlFor: 'file-maid-manage-fallback' },
+                        h('input', {
+                          'data-file-maid': 'check',
+                          id: 'file-maid-manage-fallback',
+                          type: 'checkbox',
+                          checked: manage.makeDefault === true,
+                          disabled: manage.makeDefault === true,
+                          onChange: (event) => setManage({ ...manage, makeDefault: event.target.checked }),
+                        }),
+                        t('manage.fallback'),
+                      ),
+                      h(
+                        'span',
+                        { 'data-file-maid': 'muted' },
+                        manage.makeDefault === true ? t('manage.fallbackCurrent') : t('manage.fallbackHint'),
+                      ),
+                    )
+                  : null,
                 manageError === '' ? null : h('div', { 'data-file-maid': 'manageerror' }, manageError),
                 manageHint === '' ? null : h('div', { 'data-file-maid': 'managehint' }, manageHint),
                 h(
@@ -2543,6 +2600,7 @@ window.__ModuleLoader__.load({
                         t('manage.add'),
                       ),
                     ),
+                dirError === '' ? null : h('div', { 'data-file-maid': 'rowerror' }, dirError),
                 manageBox,
                 dirs.length === 0
                   ? hintText === ''
@@ -3083,19 +3141,18 @@ window.__ModuleLoader__.load({
               ),
               badge === undefined
                 ? null
-                : h(
-                    StateTip,
-                    { tip: badge.detail === undefined || badge.detail === '' ? badge.label : badge.detail },
-                    h(
+                : (() => {
+                    const mark = h(
                       'span',
                       { 'data-file-maid': 'badge', 'data-tone': badge.tone, role: 'status' },
                       h('span', { 'data-file-maid': 'badgedot', 'aria-hidden': 'true' }),
                       h('span', { 'data-file-maid': 'badgelabel' }, badge.label),
-                    ),
-                  ),
-              badge === undefined || typeof badge.refresh !== 'function'
-                ? null
-                : h('button', { type: 'button', 'data-file-maid': 'button', onClick: badge.refresh }, t('refresh')),
+                    );
+                    // A bubble that repeats the word you are already looking at is noise:
+                    // only wrap it in one when it can say something the label cannot.
+                    const tip = typeof badge.detail === 'string' ? badge.detail.trim() : '';
+                    return tip === '' || tip === badge.label ? mark : h(StateTip, { tip }, mark);
+                  })(),
             ),
             body,
           );

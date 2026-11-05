@@ -436,7 +436,7 @@ test('UI-60 the expanded log row labels its facts and prints a stable local stam
   assert.match(row, /getFullYear\(\)/u, 'the stamp is built from local parts');
   assert.doesNotMatch(row, /toLocaleString\(/u, 'no locale-dependent formatting');
   const rule = body.slice(body.indexOf("'[data-file-maid=\"itemfactlabel\"]{"));
-  assert.match(rule.slice(0, 220), /flex:0 0 32px/u, 'the labels line up in a column');
+  assert.match(rule.slice(0, 220), /flex:0 0 44px/u, 'the labels line up in a column, wide enough for four characters');
   assert.match(rule.slice(0, 220), /white-space:nowrap/u, 'a label never wraps');
 });
 
@@ -450,4 +450,40 @@ test('UI-61 the expanded directory block labels its facts and drops the duplicat
   assert.match(block, /t\('detail\.landedLabel'\)/u);
   assert.match(body, /\[data-file-maid="tabrow"\]\[data-open="true"\] \[data-file-maid="rowpath"\]\{white-space:normal/u, 'an open row may wrap a long name instead');
   assert.doesNotMatch(body, /metastrip/u, 'the merged strip is gone');
+});
+
+test('UI-62 the landed figure names its window, not just a bare number', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const dict = body.slice(body.indexOf("'detail.landedLabel': '近期落点'"));
+  assert.match(dict.slice(0, 200), /'detail\.landedCount': '\{n\} \/ \{total\} 条'/u, 'the denominator says what the number is out of');
+  assert.match(body, /fill\(t\('detail\.landedCount'\), \{ n: into\.length, total: misplaced\.length \}\)/u);
+  const roots = await readFile(join(packageDir, 'src', 'runtime', 'roots.js'), 'utf8');
+  assert.match(roots, /ROUTES_KEPT = 10/u, 'the window is the ten most recent records');
+});
+
+test('UI-63 the fallback is chosen inside the edit form, in words a user can act on', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const form = body.slice(body.indexOf("'data-file-maid': 'managebox'"), body.indexOf('const bodyNode'));
+  assert.match(form, /t\('manage\.fallback'\)/u, 'the row is labelled');
+  assert.match(form, /t\('manage\.fallbackHint'\)/u, 'the label explains when it applies');
+  assert.match(form, /type: 'checkbox'/u);
+  assert.match(form, /disabled: manage\.makeDefault === true/u, 'the current fallback cannot be unchecked');
+  const row = body.slice(body.indexOf("'data-file-maid': 'rowacts'"), body.indexOf("'data-file-maid': 'tabcount'"));
+  assert.doesNotMatch(row, /fallback|makeDefault/u, 'the row itself carries no fallback control');
+  assert.match(body, /makeDefault: manage\?\.makeDefault === true/u, 'the form sends the choice with the save');
+});
+
+test('UI-64 the card keeps itself current without a refresh button', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.doesNotMatch(body, /'data-file-maid': 'button', onClick: badge\.refresh/u, 'the manual refresh is gone');
+  assert.match(body, /addEventListener\('focus', reread\)/u);
+  assert.match(body, /addEventListener\('visibilitychange', reread\)/u);
+  assert.match(body, /setInterval\(reread, 15000\)/u, 'a visible card still picks up outside changes');
+  assert.match(body, /prefers-reduced-motion|clearInterval\(timer\)/u);
+});
+
+test('UI-65 the badge bubble only appears when it says something new', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.doesNotMatch(body, /tip: badge\.detail === undefined \|\| badge\.detail === '' \? badge\.label/u, 'the old repeat-the-label fallback is gone');
+  assert.match(body, /tip === '' \|\| tip === badge\.label \? mark : h\(StateTip/u);
 });

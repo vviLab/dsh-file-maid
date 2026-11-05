@@ -352,7 +352,7 @@ export function createManageSurface(options) {
       if (index === -1) return { ok: false, errors: [{ code: 'E_MAID_PATH', message: `${path} is not a routing directory` }] };
       if (op === 'remove') {
         if (path === catalog.rootDefault) {
-          return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '把另一个目录设为默认落点之后才能删除这一个' }] };
+          return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '先让别的目录接管「没命中时放这里」，才能删它' }] };
         }
         if (dirs.length === 1) {
           return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '至少要保留一个目录' }] };
@@ -369,7 +369,10 @@ export function createManageSurface(options) {
         if (payload.excludes !== undefined) dirs[index].excludes = typeof payload.excludes === 'string' ? payload.excludes.trim() : '';
       }
     }
-    return { ok: true, dirs, rootDefault: catalog.rootDefault };
+    // The fallback can be moved while editing a row: one save, one write, and the
+    // row being edited is the one that becomes the fallback.
+    const rootDefault = payload.makeDefault === true ? path : catalog.rootDefault;
+    return { ok: true, dirs, rootDefault };
   };
 
   /** How long a second initialisation may wait for the first one, in milliseconds. */
@@ -506,7 +509,7 @@ export function createManageSurface(options) {
 
     const rootDefault = typeof payload.rootDefault === 'string' ? canonicalCatalogPath(payload.rootDefault) : '';
     if (rootDefault === '' || !dirs.some((dir) => dir.path === rootDefault)) {
-      return { ok: false, errors: [{ code: 'E_MAID_DEFAULT_MISSING', message: '选一个默认落点，判不出来的文件会进这里。', path: '' }] };
+      return { ok: false, errors: [{ code: 'E_MAID_DEFAULT_MISSING', message: '选一个「没命中时放这里」的目录，判断不出来的文件会进它。', path: '' }] };
     }
     const verdict = validateCatalog({ version: 1, root_default: rootDefault, dirs, rules: [] });
     if (!verdict.ok) return { ok: false, errors: verdict.errors };
