@@ -287,3 +287,23 @@ test('UI-46 every setup hook in the renderer is also styled', async () => {
   const unstyles = [...produced].filter((hook) => !styled.has(hook));
   assert.deepEqual(unstyles, [], `hooks rendered without a rule: ${unstyles.join(', ')}`);
 });
+
+test('UI-47 the panel only uses host colour tokens', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const forbidden = ['label-error', 'text-tertiary', 'state-warning-primary', 'state-focus-ring'];
+  const found = forbidden.filter((name) => body.includes(`--dsw-alias-${name}`));
+  assert.deepEqual(found, [], `tokens the host does not define: ${found.join(', ')}`);
+});
+
+test('UI-48 the card carries no native title on the tab strip', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.doesNotMatch(body, /'data-file-maid': 'viewlabel', title:/u);
+  const slot = body.slice(body.indexOf("'data-file-maid': 'viewslot'"), body.indexOf("'data-file-maid': 'viewslot'") + 220);
+  assert.doesNotMatch(slot, /title:/u, 'the strip explains itself through its labels, not a tooltip');
+});
+
+test('UI-49 disabled tabs leave the tab order', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /\.\.\.\(viewsEnabled \? \{\} : \{ inert: '' \}\)/u, 'the strip is inert while the root is not managed');
+  assert.doesNotMatch(body, /viewslot"\]\[data-disabled="true"\]\{[^}]*saturate/u, 'disabled tabs keep their colour, only dimmed');
+});

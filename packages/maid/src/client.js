@@ -978,7 +978,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="bannertext"]{flex:1 1 auto;min-width:0;}',
             '[data-file-maid="bannerclose"]{flex:0 0 auto;margin:-1px -2px 0 0;padding:0 2px;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.1;cursor:pointer;border-radius:3px;}',
             '[data-file-maid="bannerclose"]:hover{color:var(--dsw-alias-label-primary);}',
-            '[data-file-maid="bannerclose"]:focus-visible{outline:2px solid var(--dsw-alias-state-focus-ring,var(--dsw-alias-label-primary));outline-offset:1px;}',
+            '[data-file-maid="bannerclose"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="banner"][data-tone="error"]{border-left-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary);}',
             '[data-file-maid="banner"][data-tone="warn"]{border-left-color:var(--dsw-alias-state-warn-primary);}',
             '[data-file-maid="section"]{margin-top:2px;font-weight:600;}',
@@ -1051,7 +1051,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="required"]{color:var(--dsw-alias-brand-primary);}',
             '[data-file-maid="input"][data-invalid="true"]{border-color:var(--dsw-alias-border-l2,currentColor);}',
             '[data-file-maid="managehint"]{color:var(--dsw-alias-label-tertiary);font-size:var(--maid-fs-meta);}',
-            '[data-file-maid="manageerror"]{color:var(--dsw-alias-label-error,#d33);font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="manageerror"]{color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-meta);border-left:2px solid var(--dsw-alias-state-error-primary);padding-left:6px;}',
             '[data-file-maid="defaulttag"]{flex:0 0 auto;color:var(--dsw-alias-brand-primary);font-size:var(--maid-fs-meta);line-height:14px;white-space:nowrap;}',
             '[data-file-maid="editrow"][data-state="removed"] [data-file-maid="mono"]{opacity:.6;}',
             '[data-file-maid="editrow"][data-state="updated"] [data-file-maid="edithint"]{color:var(--dsw-alias-brand-primary);}',
@@ -1068,7 +1068,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="input"]{min-width:0;flex:1 1 80px;height:22px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2);border-radius:5px;background:transparent;color:inherit;font:inherit;font-size:11px;}',
             '[data-file-maid="textarea"]{width:100%;min-height:52px;padding:4px 6px;border:1px solid var(--dsw-alias-border-l2);border-radius:5px;background:transparent;color:inherit;font:inherit;font-size:11px;resize:vertical;}',
             '[data-file-maid="edithint"]{color:var(--dsw-alias-label-secondary);font-size:10.5px;line-height:1.45;}',
-            '[data-file-maid="viewslot"][data-disabled="true"]{opacity:.45;filter:saturate(.35);}',
+            '[data-file-maid="viewslot"][data-disabled="true"]{opacity:.55;}',
             '[data-file-maid="viewslot"][data-disabled="true"] [role="tab"],[data-file-maid="viewslot"][data-disabled="true"] button{pointer-events:none;cursor:default;}',
             /* Same geometry as the sidebar row: icon + label, one compact track. */
             /* The sidebar card: one header row, then the panel body when open. */
@@ -1177,11 +1177,11 @@ window.__ModuleLoader__.load({
             '[data-file-maid="scanact"]:hover{background:var(--dsw-alias-interactive-bg-hover,transparent);}',
             '[data-file-maid="scanact"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,currentColor);outline-offset:1px;}',
             '[data-file-maid="scanact"][aria-busy="true"]{opacity:.55;cursor:progress;}',
-            '[data-file-maid="scanstatus"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px;font-size:10.5px;color:var(--dsw-alias-text-tertiary,inherit);}',
-            '[data-file-maid="scanverdict"][data-tone="warn"]{color:var(--dsw-alias-state-warning-primary,#d97706);}',
-            '[data-file-maid="scanaside"][data-tone="warn"]{color:var(--dsw-alias-state-warning-primary,#d97706);}',
-            '[data-file-maid="scannote"]{margin-top:4px;font-size:10.5px;line-height:15px;color:var(--dsw-alias-text-tertiary,inherit);}',
-            '[data-file-maid="scanfacts"]{margin-top:8px;padding-top:4px;border-top:1px solid var(--dsw-alias-border-l1);font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-text-tertiary,inherit);}',
+            '[data-file-maid="scanstatus"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px;font-size:10.5px;color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="scanverdict"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
+            '[data-file-maid="scanaside"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
+            '[data-file-maid="scannote"]{margin-top:4px;font-size:10.5px;line-height:15px;color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="scanfacts"]{margin-top:8px;padding-top:4px;border-top:1px solid var(--dsw-alias-border-l1);font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanrows"]{display:flex;flex-direction:column;margin-top:var(--maid-gap-head);min-width:0;}',
             '[data-file-maid="scanrow"]{display:flex;align-items:baseline;gap:var(--maid-gap-kv);min-width:0;padding:var(--maid-row-pad) 0;border-top:1px solid var(--dsw-alias-border-l1);}',
             '[data-file-maid="scanrows"]>[data-file-maid="scanrow"]:first-child{border-top:0;padding-top:0;}',
@@ -1258,7 +1258,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="purposemore"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="metastrip"]{display:flex;align-items:center;gap:10px;min-width:0;}',
             '[data-file-maid="metaitem"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-            '[data-file-maid="rowflag"]{flex:0 0 auto;color:var(--dsw-alias-state-warning-primary,#d97706);}',
+            '[data-file-maid="rowflag"]{flex:0 0 auto;color:var(--dsw-alias-state-warn-primary);}',
             '[data-file-maid="ghostbutton"]{flex:0 0 auto;height:22px;padding:0 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;line-height:20px;cursor:pointer;white-space:nowrap;}',
             '[data-file-maid="ghostbutton"]:hover{background:var(--dsw-alias-interactive-bg-hover);}',
             '[data-file-maid="ghostbutton"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
@@ -2664,9 +2664,6 @@ window.__ModuleLoader__.load({
             );
           })();
 
-          /** What the tabs describe, for the only place a hover can explain it. */
-          const cardTitle =
-            typeof root === 'string' && root.length > 0 ? `${t('label.workspace')} ${folderName(root)}` : t('label.workspace');
           const shownView = viewsEnabled ? view : 'dirs';
           const viewItems = [
             { value: 'dirs', label: t('view.dirs') },
@@ -2678,7 +2675,7 @@ window.__ModuleLoader__.load({
             // "which workspace is this?" — the nearest `title` is the one a hover shows.
             node: h(
               'span',
-              { 'data-file-maid': 'viewlabel', title: cardTitle },
+              { 'data-file-maid': 'viewlabel' },
               viewGlyph(item.value),
               h('span', null, item.label),
             ),
@@ -3373,7 +3370,12 @@ window.__ModuleLoader__.load({
               : null;
           const viewslot = h(
             'div',
-            { 'data-file-maid': 'viewslot', 'data-disabled': viewsEnabled ? 'false' : 'true', 'aria-disabled': viewsEnabled ? 'false' : 'true', title: cardTitle },
+            {
+              'data-file-maid': 'viewslot',
+              'data-disabled': viewsEnabled ? 'false' : 'true',
+              'aria-disabled': viewsEnabled ? 'false' : 'true',
+              ...(viewsEnabled ? {} : { inert: '' }),
+            },
             switchNode,
           );
 

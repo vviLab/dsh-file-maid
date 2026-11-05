@@ -157,3 +157,11 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-44 | UI-44 an existing table counts as success on the second attempt | `ui.test.js` |
 | UI-45 | UI-45 the setup layer closes back into the directory view | `ui.test.js` |
 | UI-46 | UI-46 every setup hook in the renderer is also styled | `ui.test.js` |
+
+## 卡片视觉一致性（附录 D 的 P1）
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| UI-47 | UI-47 the panel only uses host colour tokens | `ui.test.js` |
+| UI-48 | UI-48 the card carries no native title on the tab strip | `ui.test.js` |
+| UI-49 | UI-49 disabled tabs leave the tab order | `ui.test.js` |
