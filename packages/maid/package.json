@@ -1,0 +1,57 @@
+{
+  "name": "dsh-file-maid",
+  "version": "5.0.0",
+  "private": true,
+  "type": "module",
+  "description": "File governance plugin: one write channel routes files to declared directories, three file intents guard .maid, and reconciliation measures the blind spot.",
+  "exports": {
+    ".": "./src/plugin.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./client": "./src/client.js"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "cordis.patch.yml",
+    "locale",
+    "icon.svg",
+    "README.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.2-alpha.2 <0.3.0",
+    "node": ">=22"
+  },
+  "dependencies": {
+    "yaml": "^2.5.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "file-governance",
+    "routing"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-ui-primitives": ">=0.2.2-alpha.2 <0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-client-ui-primitives": {
+      "optional": true
+    }
+  }
+}

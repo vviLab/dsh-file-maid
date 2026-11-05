@@ -1,0 +1,38 @@
+# === 本机工件（不随仓库分发；只忽略项目根，子目录内的保持入库）===
+/AGENTS.md
+/CLAUDE.md
+
+# === 内部方案文档（设计与推演过程，只留本地，不随仓库分发）===
+/docs/router-plan-*.md
+/docs/*-plan-*.md
+/docs/guard-plan-*.md
+/docs/init-interview-plan-*.md
+/docs/write-ledger-plan-*.md
+/docs/audit-response.md
+/docs/init-audit-*.md
+
+# === 可重建产物（随时可重新生成，可安全删除）===
+/release/
+/dist/
+/output/
+
+# === 留存记录（仅本地保留，删除即丢失，需保留时先归档到工作区根 99-Archives/）===
+/logs/
+
+# === 凭据与环境 ===
+.env
+.env.*
+!.env.example
+
+# === 系统与编辑器 ===
+.DS_Store
+Thumbs.db
+._*
+.idea/
+.vscode/
+
+# === 运行时噪音 ===
+*.log
+
+# === 语言工具链 ===
+node_modules/

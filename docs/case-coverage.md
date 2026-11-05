@@ -1,0 +1,121 @@
+# 验收用例 → 测试映射
+
+PLAN v5.0 §11 的判据逐条落到具体测试。用例编号写在测试标题里，因此这张表可以从标题重新生成，不会与代码脱节：
+
+```bash
+grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.js | sort -u
+```
+
+一条测试可以锁多条用例，因为一次调用同时说明了几件事。
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| C-01 | C-01 a complete catalog validates and normalizes | `core.test.js` |
+| C-02 | C-02 version must be 1 | `core.test.js` |
+| C-03 | C-03 dirs must be non-empty and paths unique | `core.test.js` |
+| C-03b | C-03b a retired role field is accepted and never written back | `core.test.js` |
+| C-04 | C-04 root_default must be one of the declared directories | `core.test.js` |
+| C-05 | C-05 an empty purpose loads with a warning | `core.test.js` |
+| C-06 | C-06 a rule pointing at an undeclared directory is dropped | `core.test.js` |
+| C-07 | C-07 path traversal and reserved segments are refused | `core.test.js` |
+| C-08 | C-08 naming declarations are reported as not implemented | `core.test.js` |
+| D-01 | D-01 a rule wins over the caller directory and reports overridden | `core.test.js` |
+| D-02 | D-02 the caller directory wins over the default | `core.test.js` |
+| D-03 | D-03 the default catches everything else | `core.test.js` |
+| D-04 | D-04 an undeclared caller directory is refused, not defaulted | `core.test.js` |
+| D-05 | D-05 candidates rank accepted purposes above refused ones | `core.test.js` |
+| D-06 | D-06 a file name alone can trigger a rule | `core.test.js` |
+| D-07 | D-07 names that could escape the directory are refused | `core.test.js` |
+| X-01 | X-01 the session tail keeps the newest text within one fence | `core.test.js` |
+| R-01 | R-01 the gap is new files minus recorded writes | `core.test.js` |
+| R-02 | R-02 the first scan is a baseline and reports no gap | `core.test.js` |
+| R-03 | R-03 deletions never produce a negative gap | `core.test.js` |
+| R-04 | R-04 a quiet window reports a zero gap | `core.test.js` |
+| M-01 | M-01 add declares a directory and creates the folder | `manage.test.js` |
+| M-02 | M-02 add refuses a directory that is already declared | `manage.test.js` |
+| M-03 | M-03 update rewrites purpose and terms, keeping the path | `manage.test.js` |
+| M-04 | M-04 removing the default output is refused | `manage.test.js` |
+| M-05 | M-05 removing another directory keeps its files and reprojects | `manage.test.js` |
+| M-06 | M-06 a root the session does not own is refused before any read | `manage.test.js` |
+| M-07 | M-07 the descriptors name the two endpoints and the service carries them | `manage.test.js` |
+| M-08 | M-08 the folder dialog answer is returned as a path inside the root | `manage.test.js` |
+| M-09 | M-09 a cancelled dialog and an outside folder are both answered, not thrown | `manage.test.js` |
+| PL-01 | PL-01 the plugin exports one name and the two services it needs | `plugin.test.js` |
+| PL-02 | PL-02 apply registers one prompt section, four tools, four hooks and two lifecycle handlers | `plugin.test.js` |
+| PL-03 | PL-03 a host without the prompt service fails the mount instead of loading silently | `plugin.test.js` |
+| I-01 | I-01 an absolute .maid path is refused lexically | `policy.test.js` |
+| I-01 | I-01 a relative .maid path is refused lexically | `policy.test.js` |
+| I-02 | I-02 and I-05 a symlinked parent directory is refused by inode | `policy.test.js` |
+| I-05 | I-02 and I-05 a symlinked parent directory is refused by inode | `policy.test.js` |
+| I-24 | I-24 the Host resolution of the target joins the protection check | `policy.test.js` |
+| I-22 | I-22 a host-resolved intent from an unknown tool is still judged | `policy.test.js` |
+| I-23 | I-23 a host-resolved intent outside the surface is allowed | `policy.test.js` |
+| I-20 | I-20 a file symlink into .maid is refused by inode | `policy.test.js` |
+| I-21 | I-21 a directory symlink into .maid is refused for new files beneath it | `policy.test.js` |
+| I-03 | I-03 a relative write after cd .maid is refused | `policy.test.js` |
+| I-04 | I-04 a relative write after the committed directory vanished is still refused | `policy.test.js` |
+| I-06 | I-06 a non-protected path continues to the next listener | `policy.test.js` |
+| I-07 | I-07 str_replace_editor view is allowed even on .maid | `policy.test.js` |
+| I-08 | I-08 str_replace_editor create is refused | `policy.test.js` |
+| I-09 | I-09 an agentless call is not served | `policy.test.js` |
+| I-10 | I-10 pre-execute returns a deny decision with the fixed prefix | `policy.test.js` |
+| PR-01 | PR-01 the section names every directory and the five rules | `prompt.test.js` |
+| PR-02 | PR-02 a missing catalog removes the section entirely | `prompt.test.js` |
+| PR-03 | PR-03 the budget is enforced by dropping rows | `prompt.test.js` |
+| PR-04 | PR-04 the same catalog renders byte-identically | `prompt.test.js` |
+| PR-05 | PR-05 the provider is silent for a root that is not managed | `prompt.test.js` |
+| R-10 | R-10 a root without a catalog is UNINITIALIZED | `runtime.test.js` |
+| R-11 | R-11 a broken catalog is ERROR and carries the reason | `runtime.test.js` |
+| R-12 | R-12 the first scan is a baseline and the projection says so | `runtime.test.js` |
+| R-13 | R-13 a second scan reconciles against the stored baseline | `runtime.test.js` |
+| R-14 | R-14 the catalog is re-read on every tool call, never cached across edits | `runtime.test.js` |
+| V-06 | V-06 invalid YAML reports E_MAID_YAML with a position | `store.test.js` |
+| S-01 | S-01 and P-02 enforce 0700 / 0600 | `store.test.js` |
+| S-03 | S-03 rotation keeps ten rotated files and starts a new base | `store.test.js` |
+| S-04 | S-04 reports are pruned to thirty and the deletion is audited | `store.test.js` |
+| S-05 | S-05 a corrupt index.json is quarantined | `store.test.js` |
+| T-01 | T-01 the four tools register with the shared envelope schema | `tools.test.js` |
+| T-02 | T-02 an uninitialized root answers UNINITIALIZED and writes nothing | `tools.test.js` |
+| T-03 | T-03 maid_put writes into the declared directory and records the decision | `tools.test.js` |
+| T-04 | T-04 a rule beats a caller directory and reports overridden | `tools.test.js` |
+| T-05 | T-05 an existing target is refused unless overwrite is set | `tools.test.js` |
+| T-06 | T-06 an undeclared directory is refused and nothing is written | `tools.test.js` |
+| T-07 | T-07 a read-only session persists nothing | `tools.test.js` |
+| T-08 | T-08 intent falls back to the session tail | `tools.test.js` |
+| T-09 | T-09 reconciliation counts files written outside the channel | `tools.test.js` |
+| T-10 | T-10 maid_init refuses to initialize from the tool | `tools.test.js` |
+| T-11 | T-11 the name check refuses separators before touching the disk | `tools.test.js` |
+| T-12 | T-12 every envelope survives a JSON round-trip unchanged | `tools.test.js` |
+| T-13 | T-13 a successful put republishes the projection the card reads | `tools.test.js` |
+| UI-01 | UI-01 a managed scan writes the v2 status document the panel reads | `ui.test.js` |
+| UI-02 | UI-02 an uninitialized root still projects its state | `ui.test.js` |
+| UI-03 | UI-03 the decision ledger reaches the panel, newest last | `ui.test.js` |
+| UI-04 | UI-04 the status file is owner-only data | `ui.test.js` |
+| UI-05 | UI-05 the client bundle registers one sidebar panel under the package id | `ui.test.js` |
+| UI-06 | UI-06 the card reads the v2 projection and maps it onto its own fields | `ui.test.js` |
+| UI-07 | UI-07 the card mounts the management endpoints | `ui.test.js` |
+| UI-08 | UI-08 the three pages are 目录 / 日志 / 扫描 in both locales | `ui.test.js` |
+| UI-09 | UI-09 the tablist and its panel stay adjacent in the card | `ui.test.js` |
+| UI-10 | UI-10 every data-file-maid hook a CSS rule styles is produced by the renderer | `ui.test.js` |
+
+## 写入账本与漏网对账
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| L-01 | L-01 a write observation lands in the ledger | `ledger.test.js` |
+| L-02/L-03 | L-02 and L-03 read observations stay out of the ledger | `ledger.test.js` |
+| L-04 | L-04 a read-only session records nothing | `ledger.test.js` |
+| L-05 | L-05 a path outside the root is not recorded | `ledger.test.js` |
+| C-01 | C-01 a scan keeps only files whose ctime is inside the window | `ledger.test.js` |
+| C-02 | C-02 the candidate list stops at the limit and says so | `ledger.test.js` |
+| R-20 | R-20 the four quantities add up | `ledger.test.js` |
+| R-21 | R-21 one path written twice is named once | `ledger.test.js` |
+| R-22 | R-22 a ledger that starts late marks the window incomplete | `ledger.test.js` |
+| M-20 | M-20 the scan endpoint answers with the reconciliation | `ledger.test.js` |
+| T-14 | T-14 a scan names the files it cannot account for | `tools.test.js` |
+| L-07 | L-07 the init marker dates the ledger without counting as a write | `ledger.test.js` |
+| R-23 | R-23 a rotation inside the window makes both channels incomplete | `ledger.test.js` |
+| R-24 | R-24 a rotation before the window leaves coverage intact | `ledger.test.js` |
+| R-25 | R-25 a stream past the byte budget rotates and records when | `ledger.test.js` |
+| R-26 | R-26 a window with a coverage hole reports counts but no names | `ledger.test.js` |
+| UI-11 | UI-11 the scan page offers a rerun button and a blind-spot list | `ledger.test.js` |

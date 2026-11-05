@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "File maid",
+    "description": "Routes new files to the right managed directory, guards the .maid protection surface, and observes misplaced files."
+  }
+}
