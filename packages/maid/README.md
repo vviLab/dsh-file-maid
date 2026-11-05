@@ -156,7 +156,7 @@ FILE_MAID:MAID_LOCKED:<LEXICAL|INODE|UNVERIFIED> <说明>
 ## 验证
 
 ```bash
-node --test test/*.test.js         # 82 条单元与集成用例
+node --test test/*.test.js         # 175 条单元、集成与渲染用例
 node scripts/check-manifest.js     # manifest、补丁、依赖与分层自检
 node scripts/cli.js route --root <dir> --name report.md --intent 报告
 node scripts/cli.js migrate --root <dir>   # v3 catalog → v5，原文件留作 catalog.yml.v3.bak

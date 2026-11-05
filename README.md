@@ -138,7 +138,7 @@ rules:
 
 ```bash
 cd packages/maid
-node --test test/*.test.js        # 124 条用例
+node --test test/*.test.js        # 175 条用例
 node scripts/check-manifest.js     # 清单自检
 node --check src/client.js         # 客户端是 classic script
 node scripts/cli.js scan --root <dir>   # 离线扫描，与插件同口径

@@ -129,6 +129,18 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-34 | UI-34 the count and the actions share the right edge | `ui.test.js` |
 | UI-35 | UI-35 opening the form closes the expanded row | `ui.test.js` |
 | UI-36 | UI-36 the directory page has no native title tooltips | `ui.test.js` |
+| UI-50 | UI-50 every styled hook is rendered and every rendered hook is styled | `ui.test.js` |
+| UI-51 | UI-51 the metrics come from the five size tiers, not from literals | `ui.test.js` |
+| UI-52 | UI-52 every disclosure controls the node it opens, and errors announce themselves | `ui.test.js` |
+| UI-53 | UI-53 a long workspace name truncates instead of running under the badge | `ui.test.js` |
+| UI-54 | UI-54 the rescan control looks pressable, not like a caption | `ui.test.js` |
+| UI-55 | UI-55 every interactive control shares one hit height | `ui.test.js` |
+| UI-56 | UI-56 every page keeps the same rhythm under its section head | `ui.test.js` |
+| UI-57 | UI-57 a long folder name truncates, and expanding the row reveals it | `ui.test.js` |
+| UI-58 | UI-58 a long file or folder name in the log truncates on each axis | `ui.test.js` |
+| UI-59 | UI-59 a log row expands to name its full path | `ui.test.js` |
+| UI-60 | UI-60 the expanded log row labels its facts and prints a stable local stamp | `ui.test.js` |
+| UI-61 | UI-61 the expanded directory block labels its facts and drops the duplicate path | `ui.test.js` |
 
 ## 未启用根的启用流程
 
@@ -165,3 +177,18 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-47 | UI-47 the panel only uses host colour tokens | `ui.test.js` |
 | UI-48 | UI-48 the card carries no native title on the tab strip | `ui.test.js` |
 | UI-49 | UI-49 disabled tabs leave the tab order | `ui.test.js` |
+
+## 客户端渲染（`RD-*`）
+
+卡片是 classic script，靠宿主页面加载进真实 React root。只读文本的用例发现不了
+「删了符号但漏改引用」——这类缺陷的表现是整块白屏。以下用例在 jsdom 里跑一遍挂载。
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| RD-01 | RD-01 the card mounts and every component body renders without throwing | `render.test.js` |
+| RD-02 | RD-02 the renderer runs the directory page, not only the shell | `render.test.js` |
+| RD-03 | RD-03 no state is read before its declaration | `render.test.js` |
+| RD-04 | RD-04 every setter call has a state behind it | `render.test.js` |
+| RD-05 | RD-05 helpers used while building the rows are declared before the rows | `render.test.js` |
+| RD-06 | RD-06 the directory rows, the table rows and the ledger all render with data | `render-data.test.js` |
+| RD-07 | RD-07 switching to the scan page renders its accounts from the snapshot | `render-data.test.js` |

@@ -182,7 +182,7 @@ test('UI-09 the tablist and its panel stay adjacent in the card', async () => {
   assert.match(body, /role: 'tabpanel'/u);
 });
 
-test('UI-10 every data-file-maid hook a CSS rule styles is produced by the renderer', async () => {
+test('UI-10 no hook selector uses prefix or substring matching', async () => {
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   assert.doesNotMatch(body, /\[data-file-maid[\^*$~|]=/u, 'no prefix/substring attribute selector: hooks are exact tokens');
 });
@@ -306,4 +306,148 @@ test('UI-49 disabled tabs leave the tab order', async () => {
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   assert.match(body, /\.\.\.\(viewsEnabled \? \{\} : \{ inert: '' \}\)/u, 'the strip is inert while the root is not managed');
   assert.doesNotMatch(body, /viewslot"\]\[data-disabled="true"\]\{[^}]*saturate/u, 'disabled tabs keep their colour, only dimmed');
+});
+
+test('UI-50 every styled hook is rendered and every rendered hook is styled', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // Hooks produced by an expression, not by a literal, and the sheet's own element.
+  const dynamic = new Set(['cardslot', 'page', 'tabpage', 'page-style']);
+  const styled = new Set([...body.matchAll(/\[data-file-maid="([\w-]+)"\]/gu)].map((m) => m[1]));
+  const rendered = new Set([...body.matchAll(/'data-file-maid': '([\w-]+)'/gu)].map((m) => m[1]));
+  const deadRules = [...styled].filter((hook) => !rendered.has(hook) && !dynamic.has(hook));
+  const unstyled = [...rendered].filter((hook) => !styled.has(hook) && !dynamic.has(hook));
+  assert.deepEqual(deadRules, [], 'a rule without a renderer is dead weight');
+  assert.deepEqual(unstyled, [], 'a rendered hook without a rule is invisible debt');
+});
+
+test('UI-51 the metrics come from the five size tiers, not from literals', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const styles = body.slice(body.indexOf('const styles = h('), body.indexOf('const applyPanelLayout'));
+  const literals = [...styles.matchAll(/font-size:(\d+(?:\.\d+)?px)/gu)].map((m) => m[1]);
+  // The wide page keeps one 14px title on purpose; everything else rides a tier.
+  assert.deepEqual(literals.filter((size) => size !== '14px'), []);
+  const heights = [...styles.matchAll(/line-height:(\d+(?:\.\d+)?);/gu)].map((m) => m[1]);
+  assert.deepEqual([...new Set(heights)].filter((value) => !['1', '1.3', '1.4', '1.45'].includes(value)), []);
+});
+
+test('UI-52 every disclosure controls the node it opens, and errors announce themselves', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const expands = [...body.matchAll(/aria-expanded/gu)];
+  const controls = [...body.matchAll(/aria-controls/gu)];
+  assert.ok(controls.length >= expands.length, 'each aria-expanded names the node it toggles');
+  assert.match(body, /role: 'tabpanel',\s*\n\s*'aria-labelledby'/u, 'the panel is named by its tab, not repeated');
+  assert.match(body, /role: 'alert'/u, 'an error is announced rather than only painted');
+  assert.doesNotMatch(body, /label\.startsWith\(t\('setup\./u, 'required flags are explicit, not guessed from a label');
+});
+
+test('UI-53 a long workspace name truncates instead of running under the badge', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // Three things must hold together: the title can shrink, it clips with an ellipsis,
+  // and the toggle cannot paint over its siblings.
+  assert.match(body, /\[data-file-maid="cardtitle"\]\{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\}/u);
+  assert.match(body, /\[data-file-maid="cardsuffix"\]\{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;/u);
+  assert.match(body, /\[data-file-maid="cardtoggle"\]\{[^}]*overflow:hidden;/u);
+  assert.match(body, /\[data-file-maid="statetip"\]\{[^}]*flex:0 1 auto;[^}]*max-width:50%;/u);
+  const header = body.slice(body.indexOf("'data-file-maid': 'cardhead'"), body.indexOf("'data-file-maid': 'cardbody'"));
+  assert.doesNotMatch(header, /title:/u, 'no native tooltip in the header');
+});
+
+test('UI-54 the rescan control looks pressable, not like a caption', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const rule = body.slice(body.indexOf('[data-file-maid="scanact"]{'), body.indexOf('[data-file-maid="scanact"]:hover'));
+  assert.match(rule, /border:1px solid/u, 'it has an edge');
+  assert.match(rule, /border-radius:6px/u);
+  assert.match(rule, /background:var\(--dsw-alias-bg-layer-1/u, 'it has a surface');
+  assert.match(rule, /min-height:24px/u, 'it meets the 24px hit target');
+});
+
+test('UI-55 every interactive control shares one hit height', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const controls = ['linkbutton', 'rowact', 'ghostbutton', 'scanact', 'purposemore', 'morebar'];
+  for (const hook of controls) {
+    const at = body.indexOf(`'[data-file-maid="${hook}"]{`);
+    assert.ok(at > 0, `${hook} has a base rule`);
+    const rule = body.slice(at, body.indexOf('}', at));
+    assert.match(rule, /min-height:24px/u, `${hook} is 24px tall`);
+  }
+  const head = body.slice(body.indexOf('[data-file-maid="sectionhead"]{'));
+  assert.match(head.slice(0, head.indexOf('}')), /align-items:center/u, 'section heads centre their controls');
+});
+
+test('UI-56 every page keeps the same rhythm under its section head', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const at = body.indexOf('-maid-gap-head:');
+  assert.match(body.slice(at, at + 20), /-maid-gap-head:8px/u, 'heads sit 8px above their content');
+  const scanrows = body.slice(body.indexOf("'[data-file-maid=\"scanrows\"]{"), body.indexOf("'[data-file-maid=\"scanrows\"]{") + 160);
+  assert.match(scanrows, /margin-top:0/u, 'the scan rows do not add their own gap');
+  const list = body.slice(body.indexOf("'[data-file-maid=\"list\"]{"), body.indexOf("'[data-file-maid=\"list\"]{") + 120);
+  assert.match(list, /margin:0/u, 'the log list does not add its own gap');
+  const head = body.slice(body.indexOf("'[data-file-maid=\"sectionhead\"]{"), body.indexOf("'[data-file-maid=\"sectionhead\"]{") + 260);
+  assert.match(head, /min-height:24px/u);
+  assert.match(head, /align-items:center/u);
+});
+
+test('UI-57 a long folder name truncates, and expanding the row reveals it', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const path = body.slice(body.indexOf("'[data-file-maid=\"rowpath\"]{"), body.indexOf("'[data-file-maid=\"rowpath\"]{") + 160);
+  assert.match(path, /min-width:0/u);
+  assert.match(path, /text-overflow:ellipsis/u);
+  assert.match(body, /'data-file-maid': 'pathline'/u, 'the expanded block names the folder in full');
+  assert.match(body, /\[data-file-maid="pathline"\]\{[^}]*overflow-wrap:anywhere;/u, 'a long path wraps instead of overflowing');
+  const logRows = body.slice(body.indexOf('const misplacedRow'), body.indexOf('const misplacedList'));
+  assert.doesNotMatch(logRows, /title:/u, 'the log rows carry no native tooltip');
+});
+
+test('UI-58 a long file or folder name in the log truncates on each axis', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const rule = (hook) => {
+    const at = body.indexOf(`'[data-file-maid="${hook}"]{`);
+    assert.ok(at > 0, `${hook} has a rule`);
+    return body.slice(at, body.indexOf('}', at));
+  };
+  for (const hook of ['itemname', 'itemtarget']) {
+    const text = rule(hook);
+    assert.match(text, /min-width:0/u, `${hook} can shrink`);
+    assert.match(text, /text-overflow:ellipsis/u, `${hook} truncates`);
+    assert.match(text, /white-space:nowrap/u, `${hook} stays on one line`);
+  }
+  assert.match(rule('itemhead'), /overflow:hidden/u, 'the line clips its children');
+  assert.match(rule('itemtarget'), /max-width:40%/u, 'the target cannot eat the whole line');
+  assert.match(rule('pathline'), /overflow-wrap:anywhere/u, 'the expanded path wraps instead of truncating');
+});
+
+test('UI-59 a log row expands to name its full path', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const row = body.slice(body.indexOf('const misplacedRow'), body.indexOf('const misplacedList'));
+  assert.match(row, /'data-file-maid': 'itemtoggle'/u, 'the row head is the control');
+  assert.match(row, /'aria-expanded': open/u);
+  assert.match(row, /'aria-controls': id/u);
+  assert.match(row, /'data-file-maid': 'itemdetail'/u, 'the expanded block exists');
+  assert.match(row, /path === '' \? '—' : path/u, 'it prints the whole path, not the name');
+  assert.match(row, /getFullYear\(\)/u, 'it prints an absolute timestamp');
+  assert.match(body, /const \[openLog, setOpenLog\]/u, 'the open row is tracked');
+});
+
+test('UI-60 the expanded log row labels its facts and prints a stable local stamp', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const row = body.slice(body.indexOf('const misplacedRow'), body.indexOf('const misplacedList'));
+  assert.match(row, /'data-file-maid': 'itemfactlabel'/u, 'each fact carries a label');
+  assert.match(row, /t\('misplaced\.pathLabel'\)/u);
+  assert.match(row, /getFullYear\(\)/u, 'the stamp is built from local parts');
+  assert.doesNotMatch(row, /toLocaleString\(/u, 'no locale-dependent formatting');
+  const rule = body.slice(body.indexOf("'[data-file-maid=\"itemfactlabel\"]{"));
+  assert.match(rule.slice(0, 220), /flex:0 0 32px/u, 'the labels line up in a column');
+  assert.match(rule.slice(0, 220), /white-space:nowrap/u, 'a label never wraps');
+});
+
+test('UI-61 the expanded directory block labels its facts and drops the duplicate path', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const block = body.slice(body.indexOf("'data-file-maid': 'tabdetail'"), body.indexOf("const table ="));
+  assert.doesNotMatch(block, /'data-file-maid': 'pathline'/u, 'the path is no longer repeated under the row');
+  assert.match(block, /t\('dir\.purposeLabel'\)/u);
+  assert.match(block, /t\('detail\.excludesLabel'\)/u, 'the label carries no colon');
+  assert.doesNotMatch(block, /t\('detail\.excludes'\)/u, 'the colon form is for sentences, not labels');
+  assert.match(block, /t\('detail\.landedLabel'\)/u);
+  assert.match(body, /\[data-file-maid="tabrow"\]\[data-open="true"\] \[data-file-maid="rowpath"\]\{white-space:normal/u, 'an open row may wrap a long name instead');
+  assert.doesNotMatch(body, /metastrip/u, 'the merged strip is gone');
 });
