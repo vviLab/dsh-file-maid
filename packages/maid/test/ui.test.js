@@ -186,3 +186,57 @@ test('UI-10 every data-file-maid hook a CSS rule styles is produced by the rende
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   assert.doesNotMatch(body, /\[data-file-maid[\^*$~|]=/u, 'no prefix/substring attribute selector: hooks are exact tokens');
 });
+
+test('UI-32 a directory row keeps its actions inside the head line', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // The actions belong to the row they change, and live on the same line as the
+  // count axis instead of owning a line under the purpose.
+  assert.match(body, /'data-file-maid': 'rowhead'/u);
+  assert.match(body, /'data-file-maid': 'rowacts'/u);
+  assert.match(body, /'data-file-maid': 'rowact'/u);
+  assert.match(body, /'data-file-maid': 'rowpath'/u);
+  const detail = body.slice(body.indexOf("'data-file-maid': 'tabdetail'"), body.indexOf("'data-file-maid': 'tabdetail'") + 900);
+  assert.doesNotMatch(detail, /manageactions/u, 'the expanded block no longer carries the action row');
+});
+
+test('UI-33 the purpose only offers "expand" when it really overflows', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /-webkit-line-clamp:2/u, 'the clamped state is two lines');
+  assert.match(body, /clippedDir === dir\.path && !expanded/u, 'the control is conditional on a measured overflow');
+  assert.match(body, /scrollHeight - node\.clientHeight > 1/u);
+  assert.match(body, /ResizeObserver/u, 'a width change re-measures');
+});
+
+test('UI-34 the count and the actions share the right edge', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /\[data-file-maid="rowhead"\]\{[^}]*min-width:0;/u);
+  assert.match(body, /\[data-file-maid="tabcount"\]\{margin-left:auto;/u);
+  assert.match(body, /\[data-file-maid="rowacts"\]\{[^}]*flex:0 0 auto;/u);
+});
+
+test('UI-35 opening the form closes the expanded row', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const opener = body.slice(body.indexOf('const openManage'), body.indexOf('const openManage') + 400);
+  assert.match(opener, /setOpenDir\(''\)/u);
+  assert.match(opener, /setPurposeOpen\(''\)/u);
+});
+
+test('UI-36 the directory page has no native title tooltips', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const card = body.slice(body.indexOf('const compactRows'), body.indexOf('const table ='));
+  assert.doesNotMatch(card, /title:/u, 'the card row must not fall back to the native tooltip');
+  assert.match(body, /'data-file-maid': 'morebar'/u, 'the row-count control is its own bar');
+  assert.match(body, /'data-file-maid': 'ghostbutton'/u, 'the create action is a framed control');
+});
+
+test('UI-37 every t() key is present in both dictionaries', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const used = new Set([...body.matchAll(/\bt\('([a-zA-Z][\w.]*)'\)/gu)].map((match) => match[1]));
+  const missing = [];
+  for (const key of used) {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    const hits = body.match(new RegExp(`(?:'${escaped}'|\\b${escaped}):`, 'gu'))?.length ?? 0;
+    if (hits < 2) missing.push(`${key} (${hits})`);
+  }
+  assert.deepEqual(missing, [], 'a key used by the renderer must exist in zh and en');
+});

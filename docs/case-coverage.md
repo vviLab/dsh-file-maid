@@ -119,3 +119,13 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | R-25 | R-25 a stream past the byte budget rotates and records when | `ledger.test.js` |
 | R-26 | R-26 a window with a coverage hole reports counts but no names | `ledger.test.js` |
 | UI-11 | UI-11 the scan page offers a rerun button and a blind-spot list | `ledger.test.js` |
+
+## 目录页（v2 布局）
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| UI-32 | UI-32 a directory row keeps its actions inside the head line | `ui.test.js` |
+| UI-33 | UI-33 the purpose only offers "expand" when it really overflows | `ui.test.js` |
+| UI-34 | UI-34 the count and the actions share the right edge | `ui.test.js` |
+| UI-35 | UI-35 opening the form closes the expanded row | `ui.test.js` |
+| UI-36 | UI-36 the directory page has no native title tooltips | `ui.test.js` |

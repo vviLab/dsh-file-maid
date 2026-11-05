@@ -149,6 +149,8 @@ window.__ModuleLoader__.load({
         'summary.files': '{n} 个文件',
         'label.root': '工作区根',
         'label.workspace': '工作区',
+        'role.managed': '受管目录',
+        'role.autonomous': '自管目录',
         'label.uninitialized': '还没启用；让 AI 整理一次文件后开启。',
         'label.default': '默认落点',
         'label.scan': '最近扫描',
@@ -218,6 +220,13 @@ window.__ModuleLoader__.load({
         'detail.noExcludes': '—',
         'detail.misplaced': '路由指向本目录',
         'detail.misplacedShort': '落点',
+        'detail.excludesShort': '排除 {terms}',
+        'detail.landed': '落点 {n}',
+        'detail.purposeMore': '展开',
+        'detail.purposeLess': '收起',
+        'dir.row': '{path}，{files} 个文件',
+        'manage.editOf': '编辑 {path}',
+        'manage.deleteOf': '删除 {path}',
         'detail.default': '默认落点',
         'misplaced.empty': '没有记录',
         'misplaced.emptyHint': '最近的落点判定与依据会记在这里。',
@@ -295,7 +304,7 @@ window.__ModuleLoader__.load({
         'init.leave': '← 返回',
         'init.discard': '放弃 {n} 项修改',
         'stat.dirs': '个目录',
-        'more.show': '还有 {n} 个',
+        'more.show': '还有 {n} 个目录',
         'more.hide': '收起',
         'refresh': '刷新',
         'readonly': '只读视图 · 不改动任何配置',
@@ -320,6 +329,8 @@ window.__ModuleLoader__.load({
         'summary.files': '{n} files',
         'label.root': 'root',
         'label.workspace': 'workspace',
+        'role.managed': 'managed dir',
+        'role.autonomous': 'autonomous dir',
         'label.uninitialized': 'Not enabled yet; one tidy-up turns it on.',
         'label.default': 'default',
         'label.scan': 'last scan',
@@ -368,6 +379,8 @@ window.__ModuleLoader__.load({
         'scan.recordedNote': 'the log rotated inside this window, so the list is unreliable; counts only',
         'scan.residualUnknown': 'this window has a coverage gap, so the remainder cannot be computed',
         'scan.factRoot': 'root',
+        'k.newFiles': 'new',
+        'k.recorded': 'via plugin',
         'k.ledger': 'Ledger',
         'k.missing': 'Unaccounted',
         'section.baseline': 'Root & baseline',
@@ -386,6 +399,13 @@ window.__ModuleLoader__.load({
         'detail.noExcludes': '—',
         'detail.misplaced': 'misplaced into this dir',
         'detail.misplacedShort': 'into',
+        'detail.excludesShort': 'excludes {terms}',
+        'detail.landed': 'landed {n}',
+        'detail.purposeMore': 'more',
+        'detail.purposeLess': 'less',
+        'dir.row': '{path}, {files} files',
+        'manage.editOf': 'Edit {path}',
+        'manage.deleteOf': 'Delete {path}',
         'detail.default': 'default dir',
         'misplaced.empty': 'none recorded',
         'misplaced.emptyHint': 'Recent placement decisions and their reasons are listed here.',
@@ -1096,10 +1116,31 @@ window.__ModuleLoader__.load({
             '[data-file-maid="tablist"]{display:flex;flex-direction:column;}',
             '[data-file-maid="tabrow"]{display:flex;flex-direction:column;min-width:0;border-top:1px solid var(--dsw-alias-border-l1);}',
             '[data-file-maid="tabrow"]:first-child{border-top:0;}',
-            '[data-file-maid="tabtoggle"]{display:flex;align-items:center;gap:6px;width:100%;padding:var(--maid-row-pad) 0;border:0;background:none;color:inherit;font:inherit;font-size:var(--maid-fs-row);cursor:pointer;text-align:left;}',
+            '[data-file-maid="rowhead"]{display:flex;align-items:center;gap:6px;min-width:0;}',
+            '[data-file-maid="tabtoggle"]{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;padding:var(--maid-row-pad) 0;border:0;background:none;color:inherit;font:inherit;font-size:var(--maid-fs-row);cursor:pointer;text-align:left;}',
+            '[data-file-maid="rowpath"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="rowacts"]{display:flex;align-items:center;gap:6px;flex:0 0 auto;}',
+            '[data-file-maid="rowact"]{flex:0 0 auto;height:20px;padding:0 7px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;line-height:18px;cursor:pointer;white-space:nowrap;}',
+            '[data-file-maid="rowact"]:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="rowact"][data-tone="danger"]:hover,[data-file-maid="rowact"][data-tone="danger"]:focus-visible{color:var(--dsw-alias-state-error-primary,#e5484d);}',
+            '[data-file-maid="rowact"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+            '[data-file-maid="purposetext"]{font-size:var(--maid-fs-row);line-height:1.5;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;}',
+            '[data-file-maid="purposetext"][data-clipped="true"]{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}',
+            '[data-file-maid="purposemore"]{align-self:flex-start;padding:0 2px;border:0;background:none;color:var(--dsw-alias-brand-primary);font:inherit;font-size:var(--maid-fs-meta);line-height:1.4;cursor:pointer;border-radius:4px;}',
+            '[data-file-maid="purposemore"]:hover{background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="purposemore"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+            '[data-file-maid="metastrip"]{display:flex;align-items:center;gap:10px;min-width:0;}',
+            '[data-file-maid="metaitem"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="rowflag"]{flex:0 0 auto;color:var(--dsw-alias-state-warning-primary,#d97706);}',
+            '[data-file-maid="ghostbutton"]{flex:0 0 auto;height:22px;padding:0 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;line-height:20px;cursor:pointer;white-space:nowrap;}',
+            '[data-file-maid="ghostbutton"]:hover{background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="ghostbutton"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+            '[data-file-maid="morebar"]{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:4px;padding:4px 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-layer-2,transparent);color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-meta);cursor:pointer;}',
+            '[data-file-maid="morebar"]:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
+            '[data-file-maid="morebar"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="tabtoggle"]:hover{background:var(--dsw-alias-bg-layer-1);}',
             '[data-file-maid="tabcount"]{margin-left:auto;flex:none;color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-row);font-variant-numeric:tabular-nums;white-space:nowrap;}',
-            '[data-file-maid="tabdetail"]{display:flex;flex-direction:column;gap:2px;padding:0 2px 6px 18px;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.45;}',
+            '[data-file-maid="tabdetail"]{display:flex;flex-direction:column;gap:3px;padding:0 2px 6px 14px;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.45;}',
             '[data-file-maid="tabroot"]{display:flex;align-items:center;gap:6px;min-width:0;}',
             '[data-file-maid="tabroot"] [data-file-maid="select"]{flex:1 1 auto;min-width:0;max-width:none;}',
             '@media (max-width:720px){[data-file-maid="table"] thead{display:none;}[data-file-maid="table"] tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 0;border-bottom:1px solid var(--dsw-alias-border-l1);}[data-file-maid="td"]{border:0;padding:0;}[data-file-maid="td"][data-field="about"]{grid-column:1/-1;}[data-file-maid="cell"]{max-width:none;}}',
@@ -1337,6 +1378,33 @@ window.__ModuleLoader__.load({
             });
           }, [embedded, localeRev, tone, stateLabel, stateDetail, root]);
 
+          /** Which directory shows its purpose in full, and which one is clamped. */
+          const [purposeOpen, setPurposeOpen] = React.useState('');
+          const [clippedDir, setClippedDir] = React.useState('');
+          React.useEffect(() => {
+            // A clamped purpose only earns a "展开" control when it really overflows:
+            // the card width is variable, so the answer has to come from the DOM.
+            if (openDir === '') {
+              setClippedDir('');
+              return;
+            }
+            if (purposeOpen === openDir) {
+              setClippedDir('');
+              return;
+            }
+            const node = typeof document === 'undefined' ? null : document.querySelector('[data-file-maid="purposetext"]');
+            if (node === null) {
+              setClippedDir('');
+              return;
+            }
+            const measure = () => setClippedDir(node.scrollHeight - node.clientHeight > 1 ? openDir : '');
+            measure();
+            if (typeof ResizeObserver === 'undefined') return;
+            const observer = new ResizeObserver(measure);
+            observer.observe(node);
+            return () => observer.disconnect();
+          }, [openDir, purposeOpen, revision, localeRev]);
+
           const totalFiles = dirs.reduce((sum, dir) => sum + (Number.isFinite(dir.files) ? dir.files : 0), 0);
           const metaParts = [];
           if (typeof catalog?.rootDefault === 'string') metaParts.push({ text: `${t('label.default')} ${catalog.rootDefault}` });
@@ -1513,7 +1581,10 @@ window.__ModuleLoader__.load({
                       type: 'button',
                       'data-file-maid': 'row-toggle',
                       'aria-expanded': isOpen ? 'true' : 'false',
-                      onClick: () => setOpenDir(isOpen ? '' : dir.path),
+                      onClick: () => {
+                      setOpenDir(isOpen ? '' : dir.path);
+                      if (isOpen) setPurposeOpen('');
+                    },
                     },
                     h('span', { 'aria-hidden': 'true' }, isOpen ? '▾' : '▸'),
                     h('span', { 'data-file-maid': 'cell', title: dir.path }, dir.path),
@@ -1563,10 +1634,26 @@ window.__ModuleLoader__.load({
             }
           }
 
+          const purposeOf = (dir) => (typeof dir.purpose === 'string' && dir.purpose !== '' ? dir.purpose : '');
           const compactRows = dirs.map((dir) => {
             const isOpen = openDir === dir.path;
             const excludes = typeof dir.excludes === 'string' ? dir.excludes : '';
             const into = misplaced.filter((item) => item.suggested === dir.path);
+            const purpose = purposeOf(dir);
+            const expanded = purposeOpen === dir.path;
+            /* One row of facts: path axis on the left, count axis on the right, and
+               the two row actions living inside the head line instead of under it. */
+            const meta = [];
+            if (excludes !== '') meta.push(h('span', { key: 'ex', 'data-file-maid': 'metaitem' }, fill(t('detail.excludesShort'), { terms: excludes })));
+            if (into.length > 0) {
+              meta.push(
+                h(
+                  'span',
+                  { key: 'landed', 'data-file-maid': 'rowflag', 'data-tone': 'warn' },
+                  fill(t('detail.landed'), { n: into.length }),
+                ),
+              );
+            }
             return h(
               'div',
               {
@@ -1575,42 +1662,88 @@ window.__ModuleLoader__.load({
                 'data-default': dir.path === catalog?.rootDefault ? 'true' : 'false',
               },
               h(
-                'button',
-                {
-                  type: 'button',
-                  'data-file-maid': 'tabtoggle',
-                  'aria-expanded': isOpen ? 'true' : 'false',
-                  onClick: () => setOpenDir(isOpen ? '' : dir.path),
-                },
-                h('span', { 'aria-hidden': 'true' }, isOpen ? '▾' : '▸'),
-                h('span', { 'data-file-maid': 'cell', title: dir.path }, dir.path),
-                dir.path === catalog?.rootDefault
-                  ? h('span', { 'data-file-maid': 'defaulttag' }, `★ ${t('detail.default')}`)
+                'div',
+                { 'data-file-maid': 'rowhead' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    'data-file-maid': 'tabtoggle',
+                    'aria-expanded': isOpen ? 'true' : 'false',
+                    'aria-label': `${fill(t('dir.row'), { path: dir.path, files: fileCount(dir.files) })}${
+                      dir.path === catalog?.rootDefault ? `，${t('detail.default')}` : ''
+                    }`,
+                    onClick: () => setOpenDir(isOpen ? '' : dir.path),
+                  },
+                  h('span', { 'aria-hidden': 'true' }, isOpen ? '▾' : '▸'),
+                  h('span', { 'data-file-maid': 'rowpath' }, dir.path),
+                  dir.path === catalog?.rootDefault
+                    ? h('span', { 'data-file-maid': 'defaulttag', 'aria-hidden': 'true' }, '★')
+                    : null,
+                ),
+                isOpen
+                  ? h(
+                      'div',
+                      { 'data-file-maid': 'rowacts' },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          'data-file-maid': 'rowact',
+                          'aria-label': fill(t('manage.editOf'), { path: dir.path }),
+                          onClick: () => openManage('edit', dir),
+                        },
+                        t('manage.edit'),
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          'data-file-maid': 'rowact',
+                          'data-tone': 'danger',
+                          'aria-label': fill(t('manage.deleteOf'), { path: dir.path }),
+                          onClick: () => openManage('remove', dir),
+                        },
+                        t('manage.delete'),
+                      ),
+                    )
                   : null,
-                h('span', { 'data-file-maid': 'tabcount' }, fileCount(dir.files)),
+                h('span', { 'data-file-maid': 'tabcount', 'aria-hidden': 'true' }, fileCount(dir.files)),
               ),
               isOpen
                 ? h(
                     'div',
                     { 'data-file-maid': 'tabdetail' },
-                    into.length > 0 ? h('div', null, `${t('detail.misplacedShort')} ${into.length}`) : null,
-                    h('div', null, typeof dir.purpose === 'string' ? dir.purpose : ''),
-                    // A directory that refuses nothing needs no line saying so.
-                    excludes.length === 0 ? null : h('div', null, `${t('detail.excludes')} ${excludes}`),
                     h(
                       'div',
-                      { 'data-file-maid': 'manageactions' },
-                      h(
-                        'button',
-                        { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => openManage('edit', dir) },
-                        t('manage.edit'),
-                      ),
-                      h(
-                        'button',
-                        { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => openManage('remove', dir) },
-                        t('manage.delete'),
-                      ),
+                      { 'data-file-maid': 'purposetext', 'data-clipped': expanded ? 'false' : 'true' },
+                      purpose === '' ? '—' : purpose,
                     ),
+                    clippedDir === dir.path && !expanded
+                      ? h(
+                          'button',
+                          {
+                            type: 'button',
+                            'data-file-maid': 'purposemore',
+                            'aria-expanded': 'false',
+                            onClick: () => setPurposeOpen(dir.path),
+                          },
+                          t('detail.purposeMore'),
+                        )
+                      : null,
+                    expanded
+                      ? h(
+                          'button',
+                          {
+                            type: 'button',
+                            'data-file-maid': 'purposemore',
+                            'aria-expanded': 'true',
+                            onClick: () => setPurposeOpen(''),
+                          },
+                          t('detail.purposeLess'),
+                        )
+                      : null,
+                    meta.length === 0 ? null : h('div', { 'data-file-maid': 'metastrip' }, ...meta),
                   )
                 : null,
             );
@@ -2461,11 +2594,12 @@ window.__ModuleLoader__.load({
                   'button',
                   {
                     type: 'button',
-                    'data-file-maid': 'linkbutton',
+                    'data-file-maid': 'morebar',
                     'aria-expanded': showAllDirs ? 'true' : 'false',
                     onClick: () => setShowAllDirs(!showAllDirs),
                   },
-                  showAllDirs ? t('more.hide') : fill(t('more.show'), { n: dirs.length - 5 }),
+                  h('span', { 'data-file-maid': 'morebarlabel' }, showAllDirs ? t('more.hide') : fill(t('more.show'), { n: dirs.length - 5 })),
+                  h('span', { 'data-file-maid': 'morebarglyph', 'aria-hidden': 'true' }, showAllDirs ? '▴' : '▾'),
                 )
               : null;
           /**
@@ -2476,6 +2610,10 @@ window.__ModuleLoader__.load({
            */
           const openManage = (mode, dir) => {
             setManageError('');
+            // The form and an expanded row both live in a ~240px column; showing them
+            // at once forces a scroll for no benefit.
+            setOpenDir('');
+            setPurposeOpen('');
             setManage({
               mode,
               path: dir?.path ?? '',
@@ -2660,7 +2798,7 @@ window.__ModuleLoader__.load({
                       h('span', { 'data-file-maid': 'spacer' }),
                       h(
                         'button',
-                        { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => openManage('add') },
+                        { type: 'button', 'data-file-maid': 'ghostbutton', onClick: () => openManage('add') },
                         t('manage.add'),
                       ),
                     ),
