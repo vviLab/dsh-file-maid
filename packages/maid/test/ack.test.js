@@ -168,3 +168,54 @@ test('R-36 accepting hides the leak, undoing brings it back', async (t) => {
   const third = await roots.review(entry);
   assert.equal(third.missing.some((item) => item.path === leak.path), true, 'undo surfaces it again');
 });
+
+test('R-37 an acceptance after a restart still updates the stored projection', async (t) => {
+  const root = await makeRoot();
+  const first = createRoots({ ctx });
+  const agent = { id: 'restart-1', session: { header: { cwd: root } } };
+  const { entry } = await seed(first, agent);
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
+  await first.scan(entry, 'test');
+  first.disposeAll();
+  // The file lands after the last scan of the old process, so it is inside the window
+  // the stored baseline describes.
+  await writeFile(join(root, '80-Outputs', 'kept-out.md'), 'x');
+
+  // A new process has no scan in memory; the card is still reading the file the
+  // previous one wrote. Accepting must patch that file, not silently do nothing.
+  const second = createRoots({ ctx });
+  const fresh = second.acquire(agent);
+  const review = await second.review(fresh);
+  const leak = review.missing.find((item) => item.path === '80-Outputs/kept-out.md');
+  const result = await second.acknowledge(fresh, { op: 'ack', path: leak.path, ctime: leak.ctime });
+  assert.equal(result.ok, true);
+  second.disposeAll();
+
+  const status = JSON.parse(await readFile(join(root, '.maid', 'status.json'), 'utf8'));
+  const row = status.reconcile.missing.find((item) => item.path === '80-Outputs/kept-out.md');
+  assert.equal(row.acknowledged, true, 'the row is marked, not dropped');
+  assert.equal(status.reconcile.acknowledged_files, 1);
+  assert.equal(status.reconcile.missing_total, 1);
+});
+
+test('R-38 an undo brings the row back in the stored projection', async (t) => {
+  const root = await makeRoot();
+  const roots = createRoots({ ctx });
+  const agent = { id: 'restart-2', session: { header: { cwd: root } } };
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  await writeFile(join(root, '80-Outputs', 'back.md'), 'x');
+  const leak = (await roots.review(entry)).missing.find((item) => item.path === '80-Outputs/back.md');
+  await roots.acknowledge(entry, { op: 'ack', path: leak.path, ctime: leak.ctime });
+  await roots.acknowledge(entry, { op: 'unack', path: leak.path, ctime: leak.ctime });
+
+  const status = JSON.parse(await readFile(join(root, '.maid', 'status.json'), 'utf8'));
+  const row = status.reconcile.missing.find((item) => item.path === '80-Outputs/back.md');
+  assert.equal(row.acknowledged, false, 'undo flips the flag back');
+  assert.equal(status.reconcile.acknowledged_files, 0);
+  assert.equal(status.reconcile.missing_total, 1);
+});

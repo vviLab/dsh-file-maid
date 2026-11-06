@@ -1,3 +1,34 @@
+  const patchAcknowledgement = (entry, delta, path) => {
+    const reconcile = entry.reconcile;
+    if (reconcile === undefined || reconcile === null) return undefined;
+    const patched = applyAck(reconcile, delta, path);
+    entry.reconcile = patched;
+    if (entry.lastScan !== undefined) entry.lastScan = { ...entry.lastScan, reconcile: patched };
+    return patched;
+  };
+
+  /**
+   * Flip one entry's accepted flag and recompute the three counts.
+   *
+   * The entry is kept rather than removed: an undo needs the row back, and the card
+   * needs to know which rows were accepted before it re-reads the review.
+   * @param {object} reconcile - a reconciliation (or projection) to patch.
+   * @param {number} delta - `+1` to accept, `-1` to undo.
+   * @param {string} path - the relative path.
+   * @returns {object} a new reconciliation.
+   */
+  const applyAck = (reconcile, delta, path) => {
+    const items = (reconcile.missing ?? []).map((item) => (item.path === path ? { ...item, acknowledged: delta > 0 } : item));
+    const accepted = items.filter((item) => item.acknowledged === true).length;
+    const open = items.filter((item) => item.acknowledged !== true);
+    return {
+      ...reconcile,
+      missing: items,
+      acknowledged_files: accepted,
+      missing_total: open.length + accepted,
+    };
+  };
+
 /**
  * Root registry: one entry per session that points at a controlled root.
  *
@@ -217,32 +248,58 @@ export function createRoots(options) {
       /* an audit line that cannot be written must not undo the acceptance */
     }
     const patched = patchAcknowledgement(entry, input.op === 'ack' ? 1 : -1, path);
-    if (entry.lastScan !== undefined) await project(entry, { ...entry.lastScan, reconcile: patched });
+    if (entry.lastScan !== undefined && patched !== undefined) {
+      await project(entry, { ...entry.lastScan, reconcile: patched });
+      await patchStoredProjection(entry);
+    } else {
+      // After a host restart this entry has no scan of its own yet, but the card is
+      // still showing the projection the last scan wrote. Patch that document, or
+      // the row the operator just accepted would reappear until the next scan.
+      await patchStoredProjection(entry);
+    }
     return { ok: true, revision, counts: patched ?? undefined, dropped: pruned.dropped };
   };
 
   /**
-   * Move one entry between the leak list and the accepted count in memory.
-   * @param {object} entry - root entry.
+   * Patch the on-disk projection when this process has no scan outcome to reuse.
+   * @param {string} root - controlled root.
    * @param {number} delta - `+1` after an acceptance, `-1` after an undo.
-   * @returns {object | undefined} the patched reconciliation, if one exists.
+   * @param {string} path - the relative path that changed.
+   * @returns {Promise<void>} fulfillment after the write attempt.
    */
-  const patchAcknowledgement = (entry, delta, path) => {
-    const reconcile = entry.reconcile;
-    if (reconcile === undefined || reconcile === null) return undefined;
-    const list = Array.isArray(reconcile.missing) ? reconcile.missing : [];
-    const accepted = Number.isFinite(reconcile.acknowledged_files) ? reconcile.acknowledged_files : 0;
-    const nextMissing = delta > 0 ? list.filter((item) => item.path !== path) : list;
-    const nextAccepted = Math.max(0, accepted + delta);
-    const patched = {
-      ...reconcile,
-      missing: nextMissing,
-      acknowledged_files: nextAccepted,
-      missing_total: nextMissing.length + nextAccepted,
-    };
-    entry.reconcile = patched;
-    if (entry.lastScan !== undefined) entry.lastScan = { ...entry.lastScan, reconcile: patched };
-    return patched;
+  const patchStoredProjection = async (entry) => {
+    try {
+      // Re-measure instead of patching the old document: the row being accepted may
+      // not have existed when that document was written (a leak found by a review
+      // after the last scan), and a patch could only flip rows it already had.
+      const refreshed = await review(entry);
+      if (refreshed.ok !== true) return;
+      const text = await store.readText(store.pathsFor(entry.root).status);
+      if (text === undefined) return;
+      const document = JSON.parse(text);
+      const accepted = refreshed.acknowledged ?? [];
+      const rows = [
+        ...refreshed.missing.map((item) => ({ path: item.path, dir: item.dir, acknowledged: false })),
+        ...accepted.map((item) => ({ path: item.path, dir: item.path.split('/')[0], acknowledged: true })),
+      ];
+      document.reconcile = {
+        ...(document.reconcile ?? {}),
+        new_files: refreshed.counts.new_files,
+        recorded_files: refreshed.counts.recorded_files,
+        ledger_files: refreshed.counts.ledger_files,
+        acknowledged_files: refreshed.counts.acknowledged_files,
+        missing_total: refreshed.counts.missing_total,
+        residual: refreshed.counts.residual,
+        truncated: refreshed.truncated === true,
+        ledger_incomplete: refreshed.coverage?.ledger !== true,
+        recorded_incomplete: refreshed.coverage?.decisions !== true,
+        missing: rows,
+      };
+      document.generatedAt = new Date(now()).toISOString();
+      await store.writeStatus(entry.root, document);
+    } catch {
+      /* the projection is a convenience; failing it must not fail the acceptance */
+    }
   };
 
   /**
@@ -313,7 +370,7 @@ export function createRoots(options) {
       ? reconciliation
       : {
           ...reconciliation,
-          missing: (reconciliation.missing ?? []).map((item) => ({ path: item.path, dir: item.dir })),
+          missing: (reconciliation.missing ?? []).map((item) => ({ path: item.path, dir: item.dir, acknowledged: item.acknowledged === true })),
         };
     const document = {
       schemaVersion: '2',

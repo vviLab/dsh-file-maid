@@ -201,8 +201,10 @@ test('R-32 the leak entry carries rich fields, and the projection strips them', 
   assert.equal(leak.kind, 'file');
   assert.ok(Number.isFinite(leak.ctime), 'the reviewer can sort and confirm by ctime');
 
-  // The card reads six pages of 400 lines, so the projection keeps path and dir.
+  // The card reads six pages of 400 lines, so the projection keeps only the three
+  // fields it renders: where it is, who owns it, and whether it was accepted.
   const status = JSON.parse(await readFile(join(root, '.maid', 'status.json'), 'utf8'));
   const projected = status.reconcile.missing.find((item) => item.path === '30-Media/clu.png');
-  assert.deepEqual(Object.keys(projected).sort(), ['dir', 'path']);
+  assert.deepEqual(Object.keys(projected).sort(), ['acknowledged', 'dir', 'path']);
+  assert.equal(projected.acknowledged, false);
 });

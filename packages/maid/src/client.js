@@ -2218,7 +2218,10 @@ window.__ModuleLoader__.load({
                     : t('scan.noLeak'),
               );
 
-          const reportCount = Number.isFinite(reconcile?.missing?.length) ? reconcile.missing.length : 0;
+          // The projection keeps accepted rows with a flag, so an undo can bring the
+          // row back without another scan; the list shows only the open ones.
+          const openLeaks = Array.isArray(reconcile?.missing) ? reconcile.missing.filter((item) => item?.acknowledged !== true) : [];
+          const reportCount = openLeaks.length;
           const acceptedCount = Number.isFinite(reconcile?.acknowledged_files) ? reconcile.acknowledged_files : 0;
           const reviewKey = `${root}|${status?.generatedAt ?? ''}`;
           React.useEffect(() => {
@@ -2228,7 +2231,7 @@ window.__ModuleLoader__.load({
             void loadReview(reviewKey);
           }, [view, reviewKey, reportCount, acceptedCount]);
           /** The list shown before the rich reply lands: paths only, newest first. */
-          const missingRows = Array.isArray(reconcile?.missing) ? reconcile.missing.slice(0, 5) : [];
+          const missingRows = openLeaks.slice(0, 5);
           /** The rich reply, once it lands: name, owner, size, and the confirmation. */
           const rich = review.phase === 'ok' && review.data !== null ? review.data : null;
           /** A read-only session may look, not touch. */

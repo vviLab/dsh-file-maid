@@ -262,3 +262,5 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | UI-76 | UI-76 the export choice is remembered per root and only applies to the next scan | `ui.test.js` |
 | RD-08 | RD-08 the scan page builds the rich leak rows from the review reply | `render-data.test.js` |
 | EX-05 | EX-05 the CLI writes the same pair as the tool | `tools.test.js` |
+| R-37 | R-37 an acceptance after a restart still updates the stored projection | `ack.test.js` |
+| R-38 | R-38 an undo brings the row back in the stored projection | `ack.test.js` |
