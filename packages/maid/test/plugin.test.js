@@ -55,12 +55,12 @@ test('PL-01 the plugin exports one name and the services it needs', () => {
   assert.deepEqual(inject, ['tools', 'systemPrompt', 'sessions']);
 });
 
-test('PL-02 apply registers one prompt section, four tools, five hooks and two lifecycle handlers', () => {
+test('PL-02 apply registers one prompt section, five tools, five hooks and two lifecycle handlers', () => {
   const { ctx, log } = stubContext();
   apply(ctx);
   assert.equal(log.effects, 1);
   assert.deepEqual(log.sections, [{ name: 'file-maid:catalog', order: 300 }]);
-  assert.deepEqual(log.tools, ['maid_put', 'maid_route', 'maid_init', 'maid_scan']);
+  assert.deepEqual(log.tools, ['maid_put', 'maid_route', 'maid_init', 'maid_review', 'maid_scan']);
   assert.deepEqual(
     log.events.map((entry) => entry.event).sort(),
     [

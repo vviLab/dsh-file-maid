@@ -388,6 +388,44 @@ export function createTools(options) {
       },
     },
     {
+      name: 'maid_review',
+      description: '复核漏网文件：列出上次扫描以来没有记账凭据的改动，带体积、变更时间与归属目录。只测量，不推进基线，不写任何文件。',
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+      output: { schema: ENVELOPE_SCHEMA, render: (_args, value) => renderEnvelope('maid_review', value) },
+      async execute(_args, exec) {
+        const { entry, root } = entryFor(exec);
+        if (entry === undefined || root === undefined) return failure('E_MAID_NO_ROOT', 'this session has no session.header.cwd');
+        await roots.ready(entry);
+        await roots.load(entry);
+        if (entry.catalogState !== 'MANAGED') return stateEnvelope(entry, root);
+        let measured;
+        try {
+          measured = await roots.review(entry);
+        } catch (error) {
+          return failure('E_MAID_IO', error instanceof Error ? error.message : String(error), { root });
+        }
+        if (measured.ok !== true) return stateEnvelope(measured.catalogState, root);
+        return envelope({
+          verdict: 'OK',
+          data: {
+            root,
+            measuredAt: measured.measuredAt,
+            baseline: measured.baseline,
+            truncated: measured.truncated,
+            candidate_limit: measured.candidate_limit,
+            coverage: measured.coverage,
+            counts: measured.counts,
+            missing: measured.missing,
+            dirs: measured.dirs,
+          },
+        });
+      },
+    },
+    {
       name: 'maid_scan',
       description: '巡检受控根：统计各目录占用、与上次基线对账，可选落一份报告。只读，不改任何业务文件。',
       parameters: {

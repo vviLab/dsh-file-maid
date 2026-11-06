@@ -70,7 +70,13 @@ export async function scanManaged(input) {
       if (since !== undefined && Number.isFinite(meta?.ctime) && meta.ctime >= since) {
         // Collected in full and cut after sorting: the walk is concurrent, so the
         // arrival order is not reproducible, and the truncation point has to be.
-        candidates.push({ path: `${dir.path}/${relative}`, dir: dir.path, ctime: meta.ctime });
+        candidates.push({
+          path: `${dir.path}/${relative}`,
+          dir: dir.path,
+          ctime: meta.ctime,
+          size: Number.isFinite(meta?.size) ? meta.size : null,
+          kind: typeof meta?.kind === 'string' ? meta.kind : 'file',
+        });
       }
     }
     bytes += ownBytes;
@@ -78,7 +84,10 @@ export async function scanManaged(input) {
     dirs += section.dirs;
   }
 
-  candidates.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  // Newest first, path as the tie-break: the card shows "the newest few", so the
+  // truncation has to keep the newest few, and two runs must agree on which.
+  candidates.sort((left, right) => right.ctime - left.ctime
+    || (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
   if (candidates.length > CANDIDATE_LIMIT) {
     candidates.length = CANDIDATE_LIMIT;
     candidatesTruncated = true;

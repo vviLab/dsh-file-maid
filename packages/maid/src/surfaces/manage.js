@@ -78,6 +78,8 @@ export function remoteDescriptors() {
     invocation('pick', ['root', 'sessionId']),
     invocation('save', ['root', 'sessionId', 'payload']),
     invocation('scan', ['root', 'sessionId']),
+    invocation('review', ['root', 'sessionId']),
+    invocation('ack', ['root', 'sessionId', 'payload']),
   ];
 }
 
@@ -651,6 +653,63 @@ export function createManageSurface(options) {
         };
       }
       return { ok: true, value: { path: inside.split(sep).join('/'), cancelled: false } };
+    },
+    /**
+     * Measure one root for the card without advancing the baseline (`§4`).
+     * @param {string} root - controlled root.
+     * @param {string} sessionId - session the card names.
+     * @returns {Promise<object>} `{ ok, value }` or `{ ok: false, errors }`.
+     */
+    async review(root, sessionId) {
+      const owned = checkRoot(root, sessionId);
+      if (!owned.ok) return { ok: false, errors: owned.errors };
+      const entry = roots.acquire({ id: sessionId, session: owned.session });
+      if (entry === undefined) return { ok: false, errors: [{ code: 'E_MAID_NO_ROOT', message: 'this session has no working directory' }] };
+      try {
+        const measured = await roots.review(entry);
+        if (measured.ok !== true) {
+          return { ok: false, errors: [{ code: 'E_MAID_UNINITIALIZED', message: 'this root has no catalog to review' }] };
+        }
+        return {
+          ok: true,
+          value: {
+            measuredAt: measured.measuredAt,
+            baseline: measured.baseline,
+            truncated: measured.truncated,
+            candidateLimit: measured.candidate_limit,
+            coverage: measured.coverage,
+            counts: measured.counts,
+            missing: measured.missing,
+          },
+        };
+      } catch (error) {
+        return { ok: false, errors: [{ code: 'E_MAID_IO', message: `cannot review: ${error?.message ?? String(error)}` }] };
+      }
+    },
+    /**
+     * Accept or un-accept one leak, then republish the projection.
+     * @param {string} root - controlled root.
+     * @param {string} sessionId - session the card names.
+     * @param {string} payload - JSON string `{ op, path, ctime }`.
+     * @returns {Promise<object>} `{ ok, value }` or `{ ok: false, errors }`.
+     */
+    async ack(root, sessionId, payload) {
+      const owned = checkRoot(root, sessionId);
+      if (!owned.ok) return { ok: false, errors: owned.errors };
+      if (owned.readOnly === true) {
+        return { ok: false, errors: [{ code: 'E_MAID_READONLY', message: '这个会话是只读的，不能确认漏网条目。' }] };
+      }
+      const decoded = decode(payload);
+      if (!decoded.ok) return { ok: false, errors: decoded.errors };
+      const op = decoded.value?.op;
+      if (op !== 'ack' && op !== 'unack') {
+        return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: 'op must be one of ack, unack' }] };
+      }
+      const entry = roots.acquire({ id: sessionId, session: owned.session });
+      if (entry === undefined) return { ok: false, errors: [{ code: 'E_MAID_NO_ROOT', message: 'this session has no working directory' }] };
+      const result = await roots.acknowledge(entry, { op, path: decoded.value?.path, ctime: decoded.value?.ctime });
+      if (result.ok !== true) return { ok: false, errors: [result.error] };
+      return { ok: true, value: { revision: result.revision, counts: result.counts ?? null } };
     },
     /**
      * Run one managed scan for the card and republish the projection.

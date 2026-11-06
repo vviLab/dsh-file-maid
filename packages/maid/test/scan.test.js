@@ -65,7 +65,13 @@ test('R-29 candidate truncation is reproducible', async (t) => {
   assert.equal(first.candidates_truncated ?? first.candidatesTruncated, true);
   assert.deepEqual(first.candidates.map((entry) => entry.path), second.candidates.map((entry) => entry.path));
   const paths = first.candidates.map((entry) => entry.path);
-  assert.deepEqual(paths, [...paths].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)), 'cut lands in path order');
+  // Newest first, path as the tie-break: the card shows the newest rows, so the
+  // cut has to keep them and two runs have to agree on which.
+  const ordered = [...first.candidates].sort((left, right) => right.ctime - left.ctime
+    || (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  assert.deepEqual(paths, ordered.map((entry) => entry.path), 'cut lands in newest-first order');
+  assert.ok(first.candidates[0].size >= 0, 'a candidate carries its size');
+  assert.equal(first.candidates[0].kind, 'file');
 });
 
 test('R-30 the cap follows the measured latency, and the environment can pin it', async (t) => {

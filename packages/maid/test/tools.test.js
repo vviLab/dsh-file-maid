@@ -86,14 +86,14 @@ function tool(registered, name) {
   return found;
 }
 
-test('T-01 the four tools register with the shared envelope schema', async (t) => {
+test('T-01 the five tools register with the shared envelope schema', async (t) => {
   const { ctx, registered } = stubContext();
   const tools = createTools({ ctx, roots: createRoots({ ctx }) });
   const dispose = tools.register();
   t.after(dispose);
   assert.deepEqual(
     registered.map((definition) => definition.name),
-    ['maid_put', 'maid_route', 'maid_init', 'maid_scan'],
+    ['maid_put', 'maid_route', 'maid_init', 'maid_review', 'maid_scan'],
   );
   for (const definition of registered) {
     assert.deepEqual(definition.output.schema.required, ['schemaVersion', 'verdict', 'data', 'errors', 'warnings']);
@@ -370,4 +370,96 @@ test('T-13 a successful put republishes the projection the card reads', async (t
   assert.equal(after.routes.length, 1);
   assert.equal(after.routes[0].name, 'note.md');
   assert.equal(after.routes[0].decided_by, 'default');
+});
+
+test('T-15 maid_review lists every leak with its size and change time', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  await writeFile(join(root, '30-Media', 'clip.png'), 'x'.repeat(64));
+  await writeFile(join(root, '80-Outputs', 'note.md'), 'y');
+
+  const result = await tool(registered, 'maid_review').execute({}, exec(agent));
+  assert.equal(result.verdict, 'OK');
+  const paths = result.data.missing.map((item) => item.path).sort();
+  assert.deepEqual(paths, ['30-Media/clip.png', '80-Outputs/note.md']);
+  const clip = result.data.missing.find((item) => item.path === '30-Media/clip.png');
+  assert.equal(clip.size, 64);
+  assert.equal(clip.kind, 'file');
+  assert.ok(Number.isFinite(clip.ctime));
+  assert.equal(result.data.counts.missing, 2);
+});
+
+test('T-16 maid_review never advances the baseline', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  const before = JSON.parse(await readFile(join(root, '.maid', 'index.json'), 'utf8'));
+  await writeFile(join(root, '80-Outputs', 'later.md'), 'z');
+
+  const first = await tool(registered, 'maid_review').execute({}, exec(agent));
+  const index = JSON.parse(await readFile(join(root, '.maid', 'index.json'), 'utf8'));
+  assert.equal(index.generatedAt, before.generatedAt, 'the window start does not move');
+  assert.equal(first.data.missing.length, 1);
+
+  // Looking twice must return the same list: a review is not a scan.
+  const second = await tool(registered, 'maid_review').execute({}, exec(agent));
+  assert.deepEqual(second.data.missing.map((item) => item.path), first.data.missing.map((item) => item.path));
+});
+
+test('T-17 maid_review reports the catalog state instead of an empty list', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+
+  const result = await tool(registered, 'maid_review').execute({}, exec(agent));
+  assert.equal(result.verdict, 'UNINITIALIZED', 'an uninitialized root is not "no leaks"');
+});
+
+test('T-18 maid_review works in a read-only session and writes nothing', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext({ readOnly: true });
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  const statusBefore = await readFile(join(root, '.maid', 'status.json'), 'utf8').catch(() => '');
+  await writeFile(join(root, '80-Outputs', 'ro.md'), 'q');
+
+  const result = await tool(registered, 'maid_review').execute({}, exec(agent));
+  assert.equal(result.verdict, 'OK');
+  assert.equal(result.data.missing.length, 1);
+  const statusAfter = await readFile(join(root, '.maid', 'status.json'), 'utf8').catch(() => '');
+  assert.equal(statusAfter, statusBefore, 'a review does not touch the projection');
 });

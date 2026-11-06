@@ -24,6 +24,7 @@ export const FILES = Object.freeze({
   optOut: 'opt-out',
   reports: 'reports',
   rotation: 'rotation.json',
+  acknowledged: 'acknowledged.json',
 });
 
 /** Snapshot schema version written to `index.json`. */
@@ -72,6 +73,7 @@ export function pathsFor(root) {
     optOut: join(maid, FILES.optOut),
     reports: join(maid, FILES.reports),
     rotation: join(maid, FILES.rotation),
+    acknowledged: join(maid, FILES.acknowledged),
     logs,
   };
 }
@@ -441,6 +443,61 @@ export async function writeCatalog(root, text) {
 export async function writeOptOut(root) {
   const paths = await ensureMaidDir(root);
   await probe.writeFileAtomic(paths.optOut, `# set by maid_init at ${new Date().toISOString()}\n`, { mode: 0o600, dirMode: 0o700 });
+}
+
+/**
+ * Read the acknowledgement file (`§5`).
+ *
+ * A missing file is an empty set; a corrupt one is an empty set plus a warning.
+ * The failure direction matters: an unreadable file must resurface every leak,
+ * never hide them behind a claim that they were already accepted.
+ * @param {string} root - absolute controlled root.
+ * @returns {Promise<{ entries: Record<string, { ctime: number, at: string }>, revision: number, warning?: string }>} the stored set.
+ */
+export async function readAcknowledged(root) {
+  const paths = pathsFor(root);
+  let text;
+  try {
+    text = await probe.readTextFile(paths.acknowledged);
+  } catch {
+    return { entries: {}, revision: 0 };
+  }
+  if (text === undefined || text.trim() === '') return { entries: {}, revision: 0 };
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed === null || typeof parsed !== 'object' || typeof parsed.entries !== 'object' || parsed.entries === null) {
+      return { entries: {}, revision: 0, warning: 'E_MAID_ACK_CORRUPT' };
+    }
+    const entries = {};
+    for (const [path, entry] of Object.entries(parsed.entries)) {
+      const ctime = Number(entry?.ctime);
+      if (!Number.isFinite(ctime)) continue;
+      entries[path] = { ctime, at: typeof entry?.at === 'string' ? entry.at : new Date(0).toISOString() };
+    }
+    const revision = Number.isFinite(parsed.revision) ? Number(parsed.revision) : 0;
+    return { entries, revision };
+  } catch {
+    return { entries: {}, revision: 0, warning: 'E_MAID_ACK_CORRUPT' };
+  }
+}
+
+/**
+ * Write the acknowledgement file, bumping the revision.
+ * @param {string} root - absolute controlled root.
+ * @param {{ entries: Record<string, { ctime: number, at: string }>, revision: number }} next - the set to store.
+ * @returns {Promise<number>} the revision written.
+ */
+export async function writeAcknowledged(root, next) {
+  const paths = await ensureMaidDir(root);
+  const revision = (Number.isFinite(next?.revision) ? Number(next.revision) : 0) + 1;
+  const document = {
+    version: 1,
+    revision,
+    updatedAt: new Date().toISOString(),
+    entries: next?.entries ?? {},
+  };
+  await probe.writeFileAtomic(paths.acknowledged, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600, dirMode: 0o700 });
+  return revision;
 }
 
 /**

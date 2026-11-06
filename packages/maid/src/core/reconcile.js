@@ -35,8 +35,8 @@ function totalOf(snapshot) {
  * `recordedIncomplete` and `ledgerIncomplete` are separate on purpose: a hole in
  * the decision log only corrupts `recorded`, a hole in the write ledger only
  * corrupts `ledger`, and one flag cannot describe both.
- * @param {{ before?: { dirs?: Record<string, number>, files?: number }, after: { dirs?: Record<string, number>, files?: number }, recorded: number, ledger?: number, candidates?: { path: string, dir: string }[], recordedPaths?: Set<string>, ledgerPaths?: Set<string>, truncated?: boolean, ledgerIncomplete?: boolean, decisionsIncomplete?: boolean }} input - snapshots, channel counts, and the changed-file candidates.
- * @returns {{ baseline: boolean, new_files: number, recorded: number, ledger: number, missing: { path: string, dir: string }[], residual: number, gap: number, gap_ratio: number, top_dirs: { dir: string, added: number }[], truncated: boolean, ledger_incomplete: boolean, recorded_incomplete: boolean }} the reconciliation.
+ * @param {{ before?: { dirs?: Record<string, number>, files?: number }, after: { dirs?: Record<string, number>, files?: number }, recorded: number, ledger?: number, candidates?: { path: string, dir: string, ctime?: number, size?: number, kind?: string }[], recordedPaths?: Set<string>, ledgerPaths?: Set<string>, acknowledged?: Set<string>, truncated?: boolean, ledgerIncomplete?: boolean, decisionsIncomplete?: boolean }} input - snapshots, channel counts, changed-file candidates, and the acknowledged keys (`path@ctime`).
+ * @returns {{ baseline: boolean, new_files: number, recorded: number, ledger: number, missing: { path: string, dir: string, ctime: number | null, size: number | null, kind: string }[], residual: number, gap: number, gap_ratio: number, top_dirs: { dir: string, added: number }[], truncated: boolean, ledger_incomplete: boolean, recorded_incomplete: boolean }} the reconciliation.
  */
 export function reconcile(input) {
   const after = input.after ?? {};
@@ -94,6 +94,8 @@ export function reconcile(input) {
       recorded_files: null,
       ledger_files: null,
       missing: [],
+      acknowledged_files: null,
+      missing_total: null,
       residual: null,
       gap,
       gap_ratio: Number(ratio.toFixed(4)),
@@ -106,19 +108,37 @@ export function reconcile(input) {
 
   const recordedPaths = input.recordedPaths ?? new Set();
   const ledgerPaths = input.ledgerPaths ?? new Set();
+  const acknowledgedKeys = input.acknowledged ?? new Set();
   const missing = [];
+  let acknowledgedFiles = 0;
   const counted = new Set();
   for (const candidate of input.candidates ?? []) {
     const path = typeof candidate?.path === 'string' ? candidate.path : '';
     if (path === '' || counted.has(path)) continue;
     if (recordedPaths.has(path) || ledgerPaths.has(path)) continue;
     counted.add(path);
-    missing.push({ path, dir: typeof candidate?.dir === 'string' ? candidate.dir : '' });
+    const ctime = Number.isFinite(candidate?.ctime) ? candidate.ctime : null;
+    if (ctime !== null && acknowledgedKeys.has(`${path}@${ctime}`)) {
+      // Still a new file, just one a human has already looked at: it leaves the
+      // list but stays in the arithmetic, otherwise it would resurface as residual.
+      acknowledgedFiles += 1;
+      continue;
+    }
+    // Rich fields travel with the entry so a reviewer can tell a 2 KB note from a
+    // 40 MB video; the card's projection strips them again (see `roots.project`).
+    missing.push({
+      path,
+      dir: typeof candidate?.dir === 'string' ? candidate.dir : '',
+      ctime,
+      size: Number.isFinite(candidate?.size) ? candidate.size : null,
+      kind: typeof candidate?.kind === 'string' ? candidate.kind : 'file',
+    });
   }
   // Count the distinct files the channels named, not the number of records:
   // one file written twice is still one accounted file.
   const accounted = new Set([...recordedPaths, ...ledgerPaths]);
-  const residual = Math.max(0, newFiles - accounted.size - missing.length);
+  const missingTotal = missing.length + acknowledgedFiles;
+  const residual = Math.max(0, newFiles - accounted.size - missingTotal);
 
   return {
     baseline: false,
@@ -130,6 +150,8 @@ export function reconcile(input) {
     recorded_files: recordedPaths.size,
     ledger_files: ledgerPaths.size,
     missing,
+    acknowledged_files: acknowledgedFiles,
+    missing_total: missingTotal,
     residual,
     gap,
     gap_ratio: Number(ratio.toFixed(4)),

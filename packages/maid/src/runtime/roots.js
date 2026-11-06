@@ -9,7 +9,10 @@
  */
 import { reconcile } from '../core/reconcile.js';
 import * as store from '../state/store.js';
-import { scanManaged, snapshotFromIndex, snapshotOf } from './scan.js';
+import { CANDIDATE_LIMIT, scanManaged, snapshotFromIndex, snapshotOf } from './scan.js';
+import { ackKey, pruneAcks } from '../core/ack.js';
+import { measure } from './measure.js';
+import { countDecisions as countWindowDecisions, readWindow } from './window.js';
 
 /** Recent decision records the card shows. */
 export const ROUTES_KEPT = 10;
@@ -112,70 +115,7 @@ export function createRoots(options) {
    * @param {string | undefined} since - ISO timestamp, inclusive.
    * @returns {Promise<number>} the count.
    */
-  /**
-   * Read one log stream restricted to a window.
-   *
-   * Both channel streams answer the same three questions: how many records fall
-   * inside the window, which paths they name, and when the stream itself starts
-   * — the last one decides whether the stream can cover the window at all.
-   * @param {string} root - absolute controlled root.
-   * @param {'decisions'|'writes'} stream - channel stream name.
-   * @param {string | undefined} since - window start as an ISO string.
-   * @returns {Promise<{ count: number, paths: Set<string>, earliest: number | undefined, covered: boolean }>} the window slice.
-   */
-  const readWindow = async (root, stream, since) => {
-    let records = [];
-    let rotatedAt;
-    try {
-      // Read the whole stream: one rotation window is at most `LOG_BYTES_LIMIT`,
-      // so the tail cap would silently under-count a busy window, and under-counting
-      // is indistinguishable from "these files really never went through the plugin".
-      records = await store.readLogTail(root, stream, Number.POSITIVE_INFINITY);
-      const marks = await store.readRotation(root);
-      rotatedAt = Date.parse(marks?.[stream]);
-    } catch {
-      return { count: 0, paths: new Set(), earliest: undefined, birth: undefined, rotated: false, covered: false };
-    }
-    let earliest;
-    for (const record of records) {
-      const at = Date.parse(record?.at);
-      if (Number.isFinite(at) && (earliest === undefined || at < earliest)) earliest = at;
-    }
-    const floor = since === undefined ? undefined : Date.parse(since);
-    const inside = Number.isFinite(floor)
-      ? records.filter((record) => {
-          const at = Date.parse(record?.at);
-          return Number.isFinite(at) ? at >= floor : false;
-        })
-      : records;
-    // The ledger's `init` marker names no file: it dates the stream, it does not
-    // count as one write, so only records carrying a path are counted.
-    const paths = new Set();
-    let count = 0;
-    for (const record of inside) {
-      const path = typeof record?.path === 'string' ? record.path : '';
-      if (path === '') continue;
-      count += 1;
-      paths.add(path);
-    }
-    // Two things can leave a hole, and they are different in kind:
-    //   * a rotation inside the window moved records out of the file that was read;
-    //   * the write ledger was born inside the window (its `init` marker is newer
-    //     than the window start), so writes before its birth are simply unknown.
-    // Counts that merely begin after the window start are not a hole: nothing
-    // happened before, which is exactly what a zero count says.
-    let birth;
-    for (const record of records) {
-      if (record?.kind !== 'init') continue;
-      const at = Date.parse(record?.at);
-      if (Number.isFinite(at) && (birth === undefined || at < birth)) birth = at;
-    }
-    const rotated = Number.isFinite(floor) && Number.isFinite(rotatedAt) && rotatedAt >= floor;
-    const bornLate = stream === 'writes' && Number.isFinite(floor) && Number.isFinite(birth) && birth > floor;
-    return { count, paths, earliest, birth, rotated, covered: !rotated && !bornLate };
-  };
-
-  const countDecisions = async (root, since) => (await readWindow(root, 'decisions', since)).count;
+  const countDecisions = countWindowDecisions;
 
   /**
    * Run one managed-union scan, reconcile it, and persist the snapshot.
@@ -204,40 +144,10 @@ export function createRoots(options) {
       return outcome;
     }
 
-    let stored;
-    try {
-      stored = (await store.readIndex(entry.root)).index;
-    } catch {
-      stored = undefined;
-    }
-    const before = snapshotFromIndex(stored);
-    const windowStart = stored?.generatedAt;
-    const floor = windowStart === undefined ? undefined : Date.parse(windowStart);
-    const result = await scanManaged({
-      root: entry.root,
-      catalog: entry.catalog,
-      now,
-      since: Number.isFinite(floor) ? floor : undefined,
-    });
-    const snapshot = snapshotOf(result);
-    const decisionsWindow = await readWindow(entry.root, 'decisions', windowStart);
-    const ledgerWindow = await readWindow(entry.root, 'writes', windowStart);
-    // The ledger only covers the window when its own first record is older than
-    // the window start; a reborn or rotated ledger cannot name what it missed.
-    const ledgerIncomplete = !ledgerWindow.covered;
-    const decisionsIncomplete = !decisionsWindow.covered;
-    const reconciliation = reconcile({
-      before,
-      after: snapshot,
-      recorded: decisionsWindow.count,
-      ledger: ledgerWindow.count,
-      recordedPaths: decisionsWindow.paths,
-      ledgerPaths: ledgerWindow.paths,
-      candidates: result.candidates,
-      truncated: result.candidatesTruncated,
-      ledgerIncomplete,
-      decisionsIncomplete,
-    });
+    const storedAcks = await store.readAcknowledged(entry.root).catch(() => ({ entries: {}, revision: 0 }));
+    const acks = Object.entries(storedAcks.entries).map(([path, value]) => ({ path, ctime: value.ctime }));
+    const measurement = await measure({ root: entry.root, catalog: entry.catalog, now, acks });
+    const { result, snapshot, reconciliation } = measurement;
 
     entry.snapshot = snapshot;
     entry.reconcile = reconciliation;
@@ -245,7 +155,7 @@ export function createRoots(options) {
       await store.writeIndex(entry.root, {
         schemaVersion: store.INDEX_SCHEMA_VERSION,
         generatedAt: new Date(now()).toISOString(),
-        baseline: before === undefined,
+        baseline: measurement.baseline,
         files: snapshot.files,
         roots: Object.fromEntries(Object.entries(snapshot.dirs).map(([path, files]) => [path, { files }])),
       });
@@ -263,12 +173,114 @@ export function createRoots(options) {
       bytes: result.bytes,
       elapsed: result.elapsed,
       degraded: result.degraded,
-      baseline: before === undefined,
+      baseline: measurement.baseline,
       reconcile: reconciliation,
     };
     entry.lastScan = outcome;
     await project(entry, outcome);
     return outcome;
+  };
+
+  /**
+   * Accept or un-accept one leak (`§5`).
+   *
+   * The books do not move: the file still counts as new, it just stops being
+   * listed. Every write goes through the prune first, so the file cannot grow
+   * past its caps.
+   * @param {object} entry - root entry.
+   * @param {{ op: 'ack'|'unack', path: string, ctime: number }} input - the change.
+   * @returns {Promise<object>} `{ ok: true, revision, counts }` or `{ ok: false, error }`.
+   */
+  const acknowledge = async (entry, input) => {
+    await load(entry);
+    if (entry.catalogState !== 'MANAGED') {
+      return { ok: false, error: { code: 'E_MAID_UNINITIALIZED', message: 'this root has no catalog to review' } };
+    }
+    const path = typeof input?.path === 'string' ? input.path : '';
+    const ctime = Number(input?.ctime);
+    if (path === '' || path.startsWith('/') || path.split('/').includes('..')) {
+      return { ok: false, error: { code: 'E_MAID_PATH', message: 'the path must be relative and stay inside the root' } };
+    }
+    if (!Number.isFinite(ctime) || ctime <= 0) {
+      return { ok: false, error: { code: 'E_MAID_ACK_CTIME', message: 'ctime must be a positive integer in milliseconds' } };
+    }
+    const current = await store.readAcknowledged(entry.root);
+    const dirs = (entry.catalog?.dirs ?? []).map((dir) => dir.path);
+    const pruned = pruneAcks({ entries: current.entries, dirs, now: now() });
+    const entries = { ...pruned.kept };
+    if (input.op === 'ack') entries[path] = { ctime, at: new Date(now()).toISOString() };
+    else delete entries[path];
+    const revision = await store.writeAcknowledged(entry.root, { entries, revision: current.revision });
+    try {
+      await store.appendLog(entry.root, 'audit', { action: `ack-${input.op === 'ack' ? 'accept' : 'undo'}`, target: path, revision });
+    } catch {
+      /* an audit line that cannot be written must not undo the acceptance */
+    }
+    const patched = patchAcknowledgement(entry, input.op === 'ack' ? 1 : -1, path);
+    if (entry.lastScan !== undefined) await project(entry, { ...entry.lastScan, reconcile: patched });
+    return { ok: true, revision, counts: patched ?? undefined, dropped: pruned.dropped };
+  };
+
+  /**
+   * Move one entry between the leak list and the accepted count in memory.
+   * @param {object} entry - root entry.
+   * @param {number} delta - `+1` after an acceptance, `-1` after an undo.
+   * @returns {object | undefined} the patched reconciliation, if one exists.
+   */
+  const patchAcknowledgement = (entry, delta, path) => {
+    const reconcile = entry.reconcile;
+    if (reconcile === undefined || reconcile === null) return undefined;
+    const list = Array.isArray(reconcile.missing) ? reconcile.missing : [];
+    const accepted = Number.isFinite(reconcile.acknowledged_files) ? reconcile.acknowledged_files : 0;
+    const nextMissing = delta > 0 ? list.filter((item) => item.path !== path) : list;
+    const nextAccepted = Math.max(0, accepted + delta);
+    const patched = {
+      ...reconcile,
+      missing: nextMissing,
+      acknowledged_files: nextAccepted,
+      missing_total: nextMissing.length + nextAccepted,
+    };
+    entry.reconcile = patched;
+    if (entry.lastScan !== undefined) entry.lastScan = { ...entry.lastScan, reconcile: patched };
+    return patched;
+  };
+
+  /**
+   * Measure one root without touching the stored baseline.
+   *
+   * A review is a look, not a scan: it must not advance the window, otherwise the
+   * act of looking would erase the evidence it just found.
+   * @param {object} entry - root entry.
+   * @returns {Promise<object>} the measurement shaped for callers.
+   */
+  const review = async (entry) => {
+    await load(entry);
+    if (entry.catalogState !== 'MANAGED') {
+      return { ok: false, catalogState: entry.catalogState, measuredAt: new Date(now()).toISOString() };
+    }
+    const storedAcks = await store.readAcknowledged(entry.root).catch(() => ({ entries: {}, revision: 0 }));
+    const acks = Object.entries(storedAcks.entries).map(([path, value]) => ({ path, ctime: value.ctime }));
+    const measured = await measure({ root: entry.root, catalog: entry.catalog, now, acks });
+    const reconciliation = measured.reconciliation;
+    return {
+      ok: true,
+      measuredAt: new Date(now()).toISOString(),
+      baseline: measured.baseline,
+      truncated: reconciliation.truncated === true,
+      candidate_limit: CANDIDATE_LIMIT,
+      coverage: measured.coverage,
+      counts: {
+        new_files: reconciliation.new_files,
+        recorded_files: reconciliation.recorded_files,
+        ledger_files: reconciliation.ledger_files,
+        missing: reconciliation.missing.length,
+        acknowledged_files: reconciliation.acknowledged_files,
+        missing_total: reconciliation.missing_total,
+        residual: reconciliation.residual,
+      },
+      missing: reconciliation.missing,
+      dirs: reconciliation.top_dirs,
+    };
   };
 
   /**
@@ -292,6 +304,16 @@ export function createRoots(options) {
     } catch {
       /* the card degrades to an empty list */
     }
+    // The projection is read through six pages of 400 lines, so a rich entry would
+    // blow the card's budget: the card gets path and dir, reviewers go through
+    // `fileMaid/review`.
+    const reconciliation = entry.reconcile;
+    const projected = reconciliation === undefined || reconciliation === null
+      ? reconciliation
+      : {
+          ...reconciliation,
+          missing: (reconciliation.missing ?? []).map((item) => ({ path: item.path, dir: item.dir })),
+        };
     const document = {
       schemaVersion: '2',
       generatedAt: new Date(now()).toISOString(),
@@ -317,7 +339,7 @@ export function createRoots(options) {
             dirs: typeof outcome.dirs === 'number' ? outcome.dirs : 0,
             degraded: outcome.degraded === true,
           },
-      reconcile: entry.reconcile ?? null,
+      reconcile: projected ?? null,
       routes: routes.map((record) => ({
         at: record.at ?? null,
         name: record.name ?? '',
@@ -431,6 +453,8 @@ export function createRoots(options) {
     load,
     ready,
     scan,
+    review,
+    acknowledge,
     project,
     refreshStatus,
     projectRoot,

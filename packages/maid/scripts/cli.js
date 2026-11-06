@@ -9,6 +9,7 @@
  * Usage:
  *   node scripts/cli.js route --root <dir> --name <file> [--intent <text>]
  *   node scripts/cli.js scan  --root <dir> [--scope managed|root]
+ *   node scripts/cli.js review --root <dir>
  *   node scripts/cli.js init  --root <dir> [--mode init|opt_out|defer] [--root-default <dir>]
  *   node scripts/cli.js check
  * @module file-maid/scripts/cli
@@ -19,7 +20,8 @@ import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 import { validateCatalog } from '../src/core/catalog.js';
 import { decide } from '../src/core/decide.js';
-import { scanManaged, snapshotFromIndex } from '../src/runtime/scan.js';
+import { measure } from '../src/runtime/measure.js';
+import { snapshotFromIndex } from '../src/runtime/scan.js';
 import { reconcile } from '../src/core/reconcile.js';
 import * as store from '../src/state/store.js';
 import * as probe from '../src/state/probe.js';
@@ -118,59 +120,18 @@ async function runScan(flags) {
     files = section.files;
     dirs = section.dirs;
   } else {
-    const stored = await store.readIndex(root).then((read) => read.index).catch(() => undefined);
-    const floor = stored?.generatedAt === undefined ? undefined : Date.parse(stored.generatedAt);
-    const result = await scanManaged({
-      root,
-      catalog: loaded.catalog,
-      since: Number.isFinite(floor) ? floor : undefined,
-    });
-    files = result.files;
-    dirs = result.dirs;
-    const marks = await store.readRotation(root).catch(() => ({}));
-    const rotatedIn = (stream) => {
-      const at = Date.parse(marks?.[stream]);
-      return Number.isFinite(floor) && Number.isFinite(at) && at >= floor;
-    };
-    const window = async (stream) => {
-      const records = await store.readLogTail(root, stream, Number.POSITIVE_INFINITY).catch(() => []);
-      const inside = Number.isFinite(floor) ? records.filter((record) => Date.parse(record?.at) >= floor) : records;
-      // Only records that name a file count as a write; the ledger's `init` marker
-      // dates the stream and would otherwise shift every count by one.
-      const named = inside.filter((record) => typeof record?.path === 'string');
-      const paths = new Set(named.map((record) => record.path));
-      const count = named.length;
-      const earliest = records.reduce((low, record) => {
-        const at = Date.parse(record?.at);
-        return Number.isFinite(at) && (low === undefined || at < low) ? at : low;
-      }, undefined);
-      const birth = records.reduce((low, record) => {
-        if (record?.kind !== 'init') return low;
-        const at = Date.parse(record?.at);
-        return Number.isFinite(at) && (low === undefined || at < low) ? at : low;
-      }, undefined);
-      return { count, paths, earliest, birth };
-    };
-    const decisions = await window('decisions');
-    const ledger = await window('writes');
+    // Same measurement the plugin runs: one implementation, so the CLI report and
+    // the card cannot disagree about what counts as an unaccounted file.
+    const measured = await measure({ root, catalog: loaded.catalog });
+    files = measured.result.files;
+    dirs = measured.result.dirs;
     outcome = {
       files,
       dirs,
-      elapsed: 0,
-      baseline: snapshotFromIndex(stored) === undefined,
-      reconcile: reconcile({
-        before: snapshotFromIndex(stored),
-        after: { files, dirs: Object.fromEntries(Object.entries(result.sections).map(([path, section]) => [path, section.files])) },
-        recorded: decisions.count,
-        ledger: ledger.count,
-        recordedPaths: decisions.paths,
-        ledgerPaths: ledger.paths,
-        candidates: result.candidates,
-        truncated: result.candidatesTruncated,
-        ledgerIncomplete:
-          rotatedIn('writes') || (Number.isFinite(floor) && Number.isFinite(ledger.birth) && ledger.birth > floor),
-        decisionsIncomplete: rotatedIn('decisions'),
-      }),
+      elapsed: measured.result.elapsed,
+      baseline: measured.baseline,
+      reconcile: measured.result ? measured.reconciliation : undefined,
+      candidates: measured.result.candidates,
     };
   }
   const name = reportName(Date.now());
@@ -278,6 +239,42 @@ function runCheck() {
  * CLI entry.
  * @returns {Promise<void>} fulfillment when the subcommand finished.
  */
+/**
+ * Review one root without advancing the baseline (`§4`): prints the leak list
+ * with the rich fields a reviewer needs, and writes nothing.
+ * @param {object} flags - parsed CLI flags.
+ * @returns {Promise<void>} fulfillment after printing.
+ */
+async function runReview(flags) {
+  const root = typeof flags.root === 'string' ? resolve(flags.root) : undefined;
+  if (root === undefined) throw new Error('review needs --root <dir>');
+  const loaded = await store.readCatalog(root);
+  if (loaded.state !== 'MANAGED') {
+    print({ ok: false, state: loaded.state, errors: loaded.errors });
+    process.exitCode = 2;
+    return;
+  }
+  const measured = await measure({ root, catalog: loaded.catalog });
+  const reconciliation = measured.reconciliation;
+  print({
+    ok: true,
+    state: loaded.state,
+    root,
+    measuredAt: new Date().toISOString(),
+    baseline: measured.baseline,
+    truncated: reconciliation.truncated === true,
+    coverage: measured.coverage,
+    counts: {
+      new_files: reconciliation.new_files,
+      recorded_files: reconciliation.recorded_files,
+      ledger_files: reconciliation.ledger_files,
+      missing: reconciliation.missing.length,
+      residual: reconciliation.residual,
+    },
+    missing: reconciliation.missing,
+  });
+}
+
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const flags = parseFlags(rest);
@@ -286,6 +283,8 @@ async function main() {
       return runRoute(flags);
     case 'scan':
       return runScan(flags);
+    case 'review':
+      return runReview(flags);
     case 'init':
       return runInit(flags);
     case 'migrate':
@@ -293,7 +292,7 @@ async function main() {
     case 'check':
       return runCheck();
     default:
-      console.error('usage: cli.js <route|scan|init|migrate|check> --root <dir> [...]');
+      console.error('usage: cli.js <route|scan|review|init|migrate|check> --root <dir> [...]');
       process.exitCode = 64;
       return undefined;
   }

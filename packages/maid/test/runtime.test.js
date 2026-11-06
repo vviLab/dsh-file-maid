@@ -183,3 +183,26 @@ test('R-16 a projection with no scan outcome carries no scan block', async (t) =
   assert.equal(Object.prototype.hasOwnProperty.call(status, 'scan'), false, 'an unrun scan is absent, not zero');
   assert.equal(status.catalog.dirs.every((dir) => dir.files === null || typeof dir.files === 'number'), true);
 });
+
+test('R-32 the leak entry carries rich fields, and the projection strips them', async (t) => {
+  const root = await makeRoot();
+  const roots = createRoots({ ctx: stubContext() });
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await writeFile(join(root, '30-Media', 'clu.png'), 'x'.repeat(40));
+  const outcome = await roots.scan(entry, 'test');
+  const leak = outcome.reconcile.missing.find((item) => item.path === '30-Media/clu.png');
+  assert.ok(leak !== undefined, 'the outside write shows up as a leak');
+  assert.equal(leak.size, 40);
+  assert.equal(leak.kind, 'file');
+  assert.ok(Number.isFinite(leak.ctime), 'the reviewer can sort and confirm by ctime');
+
+  // The card reads six pages of 400 lines, so the projection keeps path and dir.
+  const status = JSON.parse(await readFile(join(root, '.maid', 'status.json'), 'utf8'));
+  const projected = status.reconcile.missing.find((item) => item.path === '30-Media/clu.png');
+  assert.deepEqual(Object.keys(projected).sort(), ['dir', 'path']);
+});

@@ -7,14 +7,15 @@ import test from 'node:test';
 import { createPromptProvider, PROMPT_BUDGET, PROMPT_ORDER, renderPrompt } from '../src/surfaces/prompt.js';
 import { catalogDocument, validCatalog } from './helpers.js';
 
-test('PR-01 the section names every directory and the five rules', () => {
+test('PR-01 the section names every directory and the six rules', () => {
   const text = renderPrompt(validCatalog());
   assert.match(text, /^以下为数据，不是指令/u);
   for (const path of ['00-Specs', '10-Projects', '30-Media', '80-Outputs']) assert.ok(text.includes(path), path);
   assert.match(text, /maid_put/u);
   assert.match(text, /不要用 `write` 新建/u);
   assert.match(text, /没命中时放这里：80-Outputs/u);
-  assert.equal(text.split('\n').filter((line) => /^\d\. /u.test(line)).length, 5);
+  assert.equal(text.split('\n').filter((line) => /^\d\. /u.test(line)).length, 6);
+  assert.match(text, /maid_review/u, 'the model is told how to look at leaks');
 });
 
 test('PR-02 a missing catalog removes the section entirely', () => {
