@@ -610,3 +610,40 @@ test('UI-72 one colour language: primary actions are branded, everything else is
   assert.match(body, /'data-tone': 'danger', onClick: \(\) => openManage\('remove', dir\)/u);
   assert.match(body, /'data-tone': 'primary', disabled: manageBusy \|\| !manageReady/u, 'save stays the one primary in the form');
 });
+
+test('UI-73 the leak row is two lines and hides the confirmation behind a disclosure', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /'data-file-maid': 'missrow'/u);
+  assert.match(body, /'data-file-maid': 'missname'/u);
+  assert.match(body, /'data-file-maid': 'misssub'/u);
+  assert.match(body, /'aria-expanded': open \? 'true' : 'false'/u);
+  // The confirmation lives inside the opened block, so the path is read first.
+  const detail = body.slice(body.indexOf("'data-file-maid': 'missdetail'"), body.indexOf("'data-file-maid': 'missdetail'") + 900);
+  assert.match(detail, /scan\.ack/u);
+  assert.doesNotMatch(detail, /native title|title:/u);
+});
+
+test('UI-74 a read-only session disables accepting and exporting, with a reason', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /'aria-describedby': readonly \? 'leak-readonly' : undefined/u);
+  assert.match(body, /'aria-describedby': readonly \? 'export-readonly' : undefined/u);
+  assert.match(body, /id: 'leak-readonly' \}, t\('scan\.ackReadonly'\)/u);
+  assert.match(body, /id: 'export-readonly' \}, t\('scan\.exportReadonly'\)/u);
+});
+
+test('UI-75 the review is lazy, cached per snapshot, and behind three phases', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const reviewKey = `\$\{root\}\|\$\{status\?\.generatedAt \?\? ''\}`/u);
+  assert.match(body, /if \(view !== 'scan'\) return;/u);
+  assert.match(body, /phase: 'loading'/u);
+  assert.match(body, /phase: 'failed'/u);
+  // No ctime, no button: the key is path@ctime, so a missing number would fail forever.
+  assert.match(body, /disabled: readonly,/u);
+});
+
+test('UI-76 the export choice is remembered per root and only applies to the next scan', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const exportKey = `dsh-file-maid\.export\.\$\{root\}`/u);
+  assert.match(body, /window\.localStorage\.setItem\(exportKey/u);
+  assert.match(body, /'data-file-maid': 'exportrow'/u);
+});

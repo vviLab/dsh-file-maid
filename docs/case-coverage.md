@@ -3,7 +3,7 @@
 PLAN v5.0 §11 的判据逐条落到具体测试。用例编号写在测试标题里，因此这张表可以从标题重新生成，不会与代码脱节：
 
 ```bash
-grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.js | sort -u
+grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/test/*.test.js | sort -u
 ```
 
 一条测试可以锁多条用例，因为一次调用同时说明了几件事。
@@ -238,3 +238,26 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | R-30 | R-30 the cap follows the measured latency, and the environment can pin it | `scan.test.js` |
 | R-31 | R-31 a scan does not stall the event loop | `scan.test.js` |
 | R-31b | R-31b mount types only shorten the starting cap | `scan.test.js` |
+| R-32 | R-32 the leak entry carries rich fields, and the projection strips them | `runtime.test.js` |
+| R-33 | R-33 an accepted leak leaves the list but keeps the arithmetic whole | `ack.test.js` |
+| R-34 | R-34 residual is subtracted from missing_total, not the visible list | `ack.test.js` |
+| R-35 | R-35 a coverage gap keeps every acknowledgement number unknown | `ack.test.js` |
+| R-36 | R-36 accepting hides the leak, undoing brings it back | `ack.test.js` |
+| T-15 | T-15 maid_review lists every leak with its size and change time | `tools.test.js` |
+| T-16 | T-16 maid_review never advances the baseline | `tools.test.js` |
+| T-17 | T-17 maid_review reports the catalog state instead of an empty list | `tools.test.js` |
+| T-18 | T-18 maid_review works in a read-only session and writes nothing | `tools.test.js` |
+| AK-01 | AK-01 a missing file is an empty set, not an error | `ack.test.js` |
+| AK-02 | AK-02 a corrupt file resurfaces everything and says so | `ack.test.js` |
+| AK-03 | AK-03 a write bumps the revision and stays private | `ack.test.js` |
+| AK-04 | AK-04 stale and retired entries are pruned on write | `ack.test.js` |
+| AK-05 | AK-05 the key carries ctime, so a later write on the same path is seen | `ack.test.js` |
+| EX-01 | EX-01 an export lands beside the report under the same stem | `tools.test.js` |
+| EX-02 | EX-02 a coverage hole exports counts as unknown, not zero | `tools.test.js` |
+| EX-03 | EX-03 the export can stand alone, and the budget counts pairs | `tools.test.js` |
+| EX-04 | EX-04 pruning drops a pair when the budget turns over | `tools.test.js` |
+| UI-73 | UI-73 the leak row is two lines and hides the confirmation behind a disclosure | `ui.test.js` |
+| UI-74 | UI-74 a read-only session disables accepting and exporting, with a reason | `ui.test.js` |
+| UI-75 | UI-75 the review is lazy, cached per snapshot, and behind three phases | `ui.test.js` |
+| UI-76 | UI-76 the export choice is remembered per root and only applies to the next scan | `ui.test.js` |
+| RD-08 | RD-08 the scan page builds the rich leak rows from the review reply | `render-data.test.js` |

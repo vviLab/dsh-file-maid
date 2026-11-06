@@ -326,7 +326,7 @@ test('UI-11 the scan page offers a rerun button and a blind-spot list', async ()
   assert.match(body, /'scan\.rerun': '重新扫描'/u);
   assert.match(body, /'section\.missing': '漏网文件'/u);
   assert.match(body, /callRemote\('scan'/u);
-  assert.match(body, /descriptorOf\('scan', \['root', 'sessionId'\]\)/u, 'the card must mount the scan descriptor');
+  assert.match(body, /descriptorOf\('scan', \['root', 'sessionId', 'payload'\]\)/u, 'the card must mount the scan descriptor');
   assert.doesNotMatch(body, /'scanactions'/u, 'the action must not own a row of its own');
   assert.match(body, /'scan\.scanNow': '立即扫描'/u, 'the empty state offers a scan');
   assert.match(body, /'scan\.leakCount': '\{n\} 个改动没被记账'/u, 'the leak count belongs to the reconcile head');

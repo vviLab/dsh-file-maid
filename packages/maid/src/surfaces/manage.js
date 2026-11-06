@@ -15,6 +15,7 @@ import { EXCLUDES_MAX, PURPOSE_MAX, validateCatalog } from '../core/catalog.js';
 import { canonicalCatalogPath, validateCatalogPath } from '../core/path.js';
 import * as store from '../state/store.js';
 import { isReadOnlySession } from '../runtime/permissions.js';
+import { exportDocument, renderReport, reportName } from './tools.js';
 
 /** npm package name the Remote contribution is filed under. */
 export const REMOTE_PACKAGE = 'dsh-file-maid';
@@ -77,7 +78,7 @@ export function remoteDescriptors() {
     invocation('draft', ['root', 'sessionId', 'path']),
     invocation('pick', ['root', 'sessionId']),
     invocation('save', ['root', 'sessionId', 'payload']),
-    invocation('scan', ['root', 'sessionId']),
+    invocation('scan', ['root', 'sessionId', 'payload']),
     invocation('review', ['root', 'sessionId']),
     invocation('ack', ['root', 'sessionId', 'payload']),
   ];
@@ -680,6 +681,8 @@ export function createManageSurface(options) {
             coverage: measured.coverage,
             counts: measured.counts,
             missing: measured.missing,
+            acknowledged: measured.acknowledged ?? [],
+            readOnly: owned.readOnly === true,
           },
         };
       } catch (error) {
@@ -717,11 +720,37 @@ export function createManageSurface(options) {
      * @param {string} sessionId - session the card names.
      * @returns {Promise<object>} `{ ok, value }` or `{ ok: false, errors }`.
      */
-    async scan(root, sessionId) {
+    async scan(root, sessionId, payload) {
       const owned = checkRoot(root, sessionId);
       if (!owned.ok) return { ok: false, errors: owned.errors };
+      if (owned.readOnly === true) {
+        // A scan writes the baseline and the projection; a read-only session has to be
+        // refused before it starts, not after the sandbox rejects the first write.
+        return { ok: false, errors: [{ code: 'E_MAID_READONLY', message: '这个会话是只读的，不能扫描。' }] };
+      }
+      // The card always sends a payload; a script calling the endpoint positionally
+      // may not, and a scan without options is the default behaviour.
+      const decoded = payload === undefined || payload === null || payload === ''
+        ? { ok: true, value: {} }
+        : decode(payload);
+      if (!decoded.ok) return { ok: false, errors: decoded.errors };
+      const wantExport = decoded.value?.export === 'json';
       try {
         const outcome = await roots.scanRoot(owned.root);
+        let report = null;
+        let exported = null;
+        if (wantExport) {
+          const name = reportName(Date.now());
+          try {
+            await store.writeReport(owned.root, name, renderReport({ root: owned.root, outcome, catalog: undefined }));
+            report = `.maid/reports/${name}`;
+            const jsonName = name.replace(/\.md$/u, '.json');
+            await store.writeScanExport(owned.root, jsonName, exportDocument({ root: owned.root, outcome }));
+            exported = `.maid/reports/${jsonName}`;
+          } catch {
+            exported = null;
+          }
+        }
         return {
           ok: true,
           value: {
@@ -733,6 +762,8 @@ export function createManageSurface(options) {
             reconcile: outcome.reconcile ?? null,
             ledger: outcome.reconcile?.ledger ?? 0,
             missing: outcome.reconcile?.missing ?? [],
+            report,
+            export: exported,
           },
         };
       } catch (error) {

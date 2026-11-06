@@ -125,7 +125,9 @@ window.__ModuleLoader__.load({
       descriptorOf('draft', ['root', 'sessionId', 'path']),
       descriptorOf('pick', ['root', 'sessionId']),
       descriptorOf('save', ['root', 'sessionId', 'payload']),
-      descriptorOf('scan', ['root', 'sessionId']),
+      descriptorOf('scan', ['root', 'sessionId', 'payload']),
+      descriptorOf('review', ['root', 'sessionId']),
+      descriptorOf('ack', ['root', 'sessionId', 'payload']),
     ];
 
     /** Machine states the snapshot may report. */
@@ -186,6 +188,25 @@ window.__ModuleLoader__.load({
         'scan.failed': '扫描没有完成，稍后再试。',
         'scan.more': '还有 {n} 个',
         'scan.ledgerIncomplete': '账本未覆盖',
+        'scan.ack': '这条我认了',
+        'scan.ackUndo': '撤销',
+        'scan.ackDone': '已确认「{name}」',
+        'scan.ackCount': '已确认 {n} 条',
+        'scan.ackFailed': '确认没有保存，稍后再试。',
+        'scan.ackReadonly': '只读会话：漏网条目不能确认。',
+        'scan.reviewLoading': '正在读取体积与变更时间…',
+        'scan.reviewFailed': '详情没有读到，只显示路径，暂时不能确认。',
+        'scan.showAll': '展开 {n} 条',
+        'scan.truncatedNote': '清单到 {n} 条上限，只保留最新的。',
+        'scan.export': '扫描时同时导出清单',
+        'scan.exportReadonly': '只读会话不能写导出文件。',
+        'k.pathFull': '完整路径',
+        'k.ctime': '变更时间',
+        'k.owner': '归属目录',
+        'kind.file': '文件',
+        'kind.dir': '文件夹',
+        'kind.link': '符号链接',
+        'kind.other': '其他',
         'scan.scanNow': '立即扫描',
         'scan.freshBaseline': '这是第一次扫描，已记下基线；下次扫描才能看出新增与漏网。',
         'scan.noLeak': '没有未记账的改动',
@@ -414,6 +435,25 @@ window.__ModuleLoader__.load({
         'scan.failed': 'The scan did not finish; try again shortly.',
         'scan.more': '{n} more',
         'scan.ledgerIncomplete': 'ledger does not cover this window',
+        'scan.ack': "I'll accept this one",
+        'scan.ackUndo': 'Undo',
+        'scan.ackDone': 'Accepted "{name}"',
+        'scan.ackCount': '{n} accepted',
+        'scan.ackFailed': 'The acceptance was not saved; try again.',
+        'scan.ackReadonly': 'Read-only session: leaks cannot be accepted.',
+        'scan.reviewLoading': 'Reading size and change time…',
+        'scan.reviewFailed': 'Details did not load; paths only, so accepting is unavailable.',
+        'scan.showAll': 'Show {n} more',
+        'scan.truncatedNote': 'The list stops at {n}; the newest are kept.',
+        'scan.export': 'Also export the list when scanning',
+        'scan.exportReadonly': 'Read-only session: nothing can be exported.',
+        'k.pathFull': 'full path',
+        'k.ctime': 'changed',
+        'k.owner': 'filed under',
+        'kind.file': 'file',
+        'kind.dir': 'folder',
+        'kind.link': 'symlink',
+        'kind.other': 'other',
         'scan.scanNow': 'Scan now',
         'scan.freshBaseline': 'First scan: the baseline is recorded now, so the next scan can show what is new.',
         'scan.noLeak': 'no unrecorded changes',
@@ -868,6 +908,24 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Render a byte count the way a reader scans it: one decimal above a kilobyte.
+     * @param {number} bytes - size in bytes.
+     * @returns {string} `842 B`, `14.2 KB`, `1.2 MB`.
+     */
+    function formatSize(bytes) {
+      const value = Number.isFinite(bytes) ? Math.max(0, bytes) : 0;
+      if (value < 1024) return `${Math.round(value)} B`;
+      const units = ['KB', 'MB', 'GB', 'TB'];
+      let scaled = value / 1024;
+      let unit = 0;
+      while (scaled >= 1024 && unit < units.length - 1) {
+        scaled /= 1024;
+        unit += 1;
+      }
+      return `${scaled >= 10 ? scaled.toFixed(0) : scaled.toFixed(1)} ${units[unit]}`;
+    }
+
+    /**
      * Render one short clock time for an ISO timestamp.
      * @param {string|undefined} iso - the record time.
      * @returns {string} `HH:MM`, or an empty string.
@@ -1141,6 +1199,27 @@ window.__ModuleLoader__.load({
             '[data-file-maid="scanaside"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
             '[data-file-maid="scannote"]{margin-top:4px;font-size:var(--maid-fs-meta);line-height:1.4;min-height:15px;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanrows"]{display:flex;flex-direction:column;margin-top:0;min-width:0;}',
+            '[data-file-maid="missrow"]{min-width:0;padding:3px 0;border-top:1px solid var(--dsw-alias-border-l1);}',
+            '[data-file-maid="missrow"]:first-child{border-top:0;}',
+            '[data-file-maid="misstoggle"]{display:flex;align-items:baseline;gap:6px;width:100%;min-height:20px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;}',
+            '[data-file-maid="missname"]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--maid-fs-body);}',
+            '[data-file-maid="missage"]{flex:0 0 auto;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;}',
+            '[data-file-maid="misssub"]{display:flex;gap:6px;justify-content:space-between;min-width:0;padding-left:2px;}',
+            '[data-file-maid="missdim"]{font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;}',
+            '[data-file-maid="missdetail"]{display:flex;flex-direction:column;gap:2px;padding:4px 0 2px;}',
+            '[data-file-maid="missfact"]{display:flex;gap:6px;min-width:0;font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="missfactlabel"]{flex:0 0 44px;color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="missfactvalue"]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="missact"]{align-self:flex-end;min-height:24px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;background:none;color:var(--dsw-alias-brand-primary);font-size:var(--maid-fs-meta);cursor:pointer;}',
+            '[data-file-maid="missact"]:disabled{color:var(--dsw-alias-label-secondary);cursor:not-allowed;}',
+            '[data-file-maid="ackbar"]{display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:24px;margin-top:4px;padding:0 6px;border-radius:6px;background:var(--dsw-alias-bg-l2,transparent);font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="acktext"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="ackblock"]{margin-top:4px;}',
+            '[data-file-maid="acktoggle"]{display:flex;align-items:center;min-height:24px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
+            '[data-file-maid="ackrow"]{display:flex;align-items:center;gap:6px;min-height:24px;font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="exportrow"]{display:flex;align-items:center;gap:6px;min-height:24px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);cursor:pointer;}',
+            '[data-file-maid="exportrow"] input{accent-color:var(--dsw-alias-brand-primary);}',
+
             '[data-file-maid="scanrow"]{display:flex;align-items:baseline;gap:var(--maid-gap-kv);min-width:0;padding:var(--maid-row-pad) 0;border-top:1px solid var(--dsw-alias-border-l1);}',
             '[data-file-maid="scanrows"]>[data-file-maid="scanrow"]:first-child{border-top:0;padding-top:0;}',
             '[data-file-maid="scankey"]{flex:0 0 auto;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.45;white-space:nowrap;}',
@@ -1282,6 +1361,14 @@ window.__ModuleLoader__.load({
           const [revision, setRevision] = React.useState(0);
           const [scanBusy, setScanBusy] = React.useState(false);
           const [scanNotice, setScanNotice] = React.useState('');
+          /** Lazy review of the leak list: `phase` mirrors the request, `data` is the reply. */
+          const [review, setReview] = React.useState({ key: '', phase: 'idle', data: null, message: '' });
+          /** Keys accepted in this page session, held until the projection catches up. */
+          const [ackedLocal, setAckedLocal] = React.useState([]);
+          const [ackNotice, setAckNotice] = React.useState('');
+          const [openLeak, setOpenLeak] = React.useState('');
+          const [openAcked, setOpenAcked] = React.useState(false);
+          const [exportWanted, setExportWanted] = React.useState(false);
           const [state, setState] = React.useState({ phase: 'loading', status: undefined, message: '', forReader: '' });
           const [openDir, setOpenDir] = React.useState('');
           /** The directory form: `undefined` when closed, otherwise the row being edited. */
@@ -2131,19 +2218,176 @@ window.__ModuleLoader__.load({
                     : t('scan.noLeak'),
               );
 
-          const missingRows = Array.isArray(reconcile?.missing) ? reconcile.missing.slice(0, 10) : [];
-          const missingBody = missingRows.map((item) =>
-            h('div', { key: `missing-${item.path}`, 'data-file-maid': 'scanrow' }, h('span', { 'data-file-maid': 'scanval' }, item.path)),
-          );
-          if (missingRows.length > 0 && reconcile.missing.length > missingRows.length) {
+          const reportCount = Number.isFinite(reconcile?.missing?.length) ? reconcile.missing.length : 0;
+          const acceptedCount = Number.isFinite(reconcile?.acknowledged_files) ? reconcile.acknowledged_files : 0;
+          const reviewKey = `${root}|${status?.generatedAt ?? ''}`;
+          React.useEffect(() => {
+            if (view !== 'scan') return;
+            if (reportCount === 0 && acceptedCount === 0) return;
+            if (review.key === reviewKey && review.phase !== 'failed') return;
+            void loadReview(reviewKey);
+          }, [view, reviewKey, reportCount, acceptedCount]);
+          /** The list shown before the rich reply lands: paths only, newest first. */
+          const missingRows = Array.isArray(reconcile?.missing) ? reconcile.missing.slice(0, 5) : [];
+          /** The rich reply, once it lands: name, owner, size, and the confirmation. */
+          const rich = review.phase === 'ok' && review.data !== null ? review.data : null;
+          /** A read-only session may look, not touch. */
+          const readonly = rich?.readOnly === true;
+          const ledgerRows = rich === null ? [] : (rich.missing ?? []).filter((item) => !ackedLocal.includes(`${item.path}@${item.ctime}`));
+          const shown = rich === null ? missingRows.length : Math.min(5, ledgerRows.length);
+          if (typeof console !== 'undefined' && rich !== null) console.error('DBG ok', JSON.stringify(rich.missing));
+          /** One compact fact line inside an opened row. */
+          const factLine = (label, value, key) =>
+            h(
+              'div',
+              { key, 'data-file-maid': 'missfact' },
+              h('span', { 'data-file-maid': 'missfactlabel' }, label),
+              h('span', { 'data-file-maid': 'missfactvalue' }, value),
+            );
+          /** The size column says the kind when a number would lie. */
+          const sizeText = (item) => {
+            if (item.kind === 'symlink') return t('kind.link');
+            if (item.kind === 'directory') return t('kind.dir');
+            if (item.kind !== 'file' || !Number.isFinite(item.size)) return t('kind.other');
+            return formatSize(item.size);
+          };
+          const leakRows = rich === null
+            ? missingRows.map((item) =>
+                h('div', { key: `missing-${item.path}`, 'data-file-maid': 'scanrow' }, h('span', { 'data-file-maid': 'scanval' }, item.path)),
+              )
+            : ledgerRows.slice(0, 5).map((item) => {
+                const name = item.path.split('/').pop();
+                const open = openLeak === item.path;
+                return h(
+                  'div',
+                  { key: `leak-${item.path}`, 'data-file-maid': 'missrow', 'data-open': open ? 'true' : 'false' },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      'data-file-maid': 'misstoggle',
+                      'aria-expanded': open ? 'true' : 'false',
+                      'aria-controls': `leak-detail-${item.path}`,
+                      onClick: () => setOpenLeak(open ? '' : item.path),
+                    },
+                    h('span', { 'data-file-maid': 'missname' }, name),
+                    h('span', { 'data-file-maid': 'missage' }, formatAge(item.ctime, t, now)),
+                  ),
+                  h(
+                    'div',
+                    { 'data-file-maid': 'misssub' },
+                    h('span', { 'data-file-maid': 'missdim' }, item.dir),
+                    h('span', { 'data-file-maid': 'missdim', 'data-align': 'end' }, sizeText(item)),
+                  ),
+                  open
+                    ? h(
+                        'div',
+                        { 'data-file-maid': 'missdetail', id: `leak-detail-${item.path}` },
+                        factLine(t('k.pathFull'), item.path, 'path'),
+                        factLine(t('k.ctime'), formatClock(new Date(item.ctime).toISOString(), now), 'ctime'),
+                        factLine(t('k.owner'), item.dir, 'owner'),
+                        readonly ? h('div', { 'data-file-maid': 'scannote', id: 'leak-readonly' }, t('scan.ackReadonly')) : null,
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            'data-file-maid': 'missact',
+                            disabled: readonly,
+                            'aria-describedby': readonly ? 'leak-readonly' : undefined,
+                            onClick: () => void changeAck('ack', item),
+                          },
+                          t('scan.ack'),
+                        ),
+                      )
+                    : null,
+                );
+              });
+          const missingBody = [...leakRows];
+          if (rich === null && missingRows.length > 0 && reportCount > missingRows.length) {
             missingBody.push(
               h(
                 'div',
                 { key: 'missing-more', 'data-file-maid': 'scanrow' },
-                h('span', { 'data-file-maid': 'scanval' }, fill(t('scan.more'), { n: reconcile.missing.length - missingRows.length })),
+                h('span', { 'data-file-maid': 'scanval' }, fill(t('scan.more'), { n: reportCount - missingRows.length })),
               ),
             );
           }
+          if (rich !== null && ledgerRows.length > shown) {
+            missingBody.push(
+              h(
+                'div',
+                { key: 'leak-more', 'data-file-maid': 'scanrow' },
+                h('span', { 'data-file-maid': 'scanval' }, fill(t('scan.showAll'), { n: ledgerRows.length - shown })),
+              ),
+            );
+          }
+          if (rich !== null && rich.truncated === true) {
+            missingBody.push(
+              h('div', { key: 'leak-trunc', 'data-file-maid': 'scannote' }, fill(t('scan.truncatedNote'), { n: rich.candidateLimit })),
+            );
+          }
+          if (review.phase === 'loading') {
+            missingBody.push(h('div', { key: 'leak-loading', 'data-file-maid': 'scannote', 'aria-live': 'polite' }, t('scan.reviewLoading')));
+          }
+          if (review.phase === 'failed') {
+            missingBody.push(
+              h(
+                'div',
+                { key: 'leak-failed', 'data-file-maid': 'scannote', 'aria-live': 'polite' },
+                review.message === '' ? t('scan.reviewFailed') : review.message,
+              ),
+            );
+          }
+          /** What just changed, so a row that disappeared has an explanation. */
+          const ackBar = ackNotice === ''
+            ? null
+            : h(
+                'div',
+                { 'data-file-maid': 'ackbar', 'aria-live': 'polite' },
+                h('span', { 'data-file-maid': 'acktext' }, ackNotice),
+                h(
+                  'button',
+                  { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => setAckNotice('') },
+                  t('scan.ackUndo'),
+                ),
+              );
+          /** Accepted leaks stay visible as a count and can be undone one by one. */
+          const ackedBlock = acceptedCount > 0
+            ? h(
+                'div',
+                { 'data-file-maid': 'ackblock' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    'data-file-maid': 'acktoggle',
+                    'aria-expanded': openAcked ? 'true' : 'false',
+                    onClick: () => setOpenAcked(!openAcked),
+                  },
+                  fill(t('scan.ackCount'), { n: acceptedCount }),
+                ),
+                openAcked && rich !== null
+                  ? (rich.acknowledged ?? []).map((item) =>
+                      h(
+                        'div',
+                        { key: `acked-${item.path}`, 'data-file-maid': 'ackrow' },
+                        h('span', { 'data-file-maid': 'missname' }, item.path.split('/').pop()),
+                        h('span', { 'data-file-maid': 'missage' }, formatAge(item.at, t, now)),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            'data-file-maid': 'linkbutton',
+                            disabled: readonly,
+                            onClick: () => void changeAck('unack', item),
+                          },
+                          t('scan.ackUndo'),
+                        ),
+                      ),
+                    )
+                  : null,
+              )
+            : null;
 
           const reconcileBody = baselineOnly
             ? scanNote('fresh', t('scan.freshBaseline'))
@@ -2165,9 +2409,11 @@ window.__ModuleLoader__.load({
                   : !coverageLost && Number.isFinite(reconcile.residual) && reconcile.residual > 0
                   ? scanNote('residual', fill(t('scan.residual'), { n: reconcile.residual }))
                   : null,
-                coverageLost || missingBody.length === 0
+                ackBar,
+                coverageLost || (missingBody.length === 0 && acceptedCount === 0)
                   ? null
                   : h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
+                ackedBlock,
               );
 
           const scanGrid = h(
@@ -2194,6 +2440,27 @@ window.__ModuleLoader__.load({
                   scanStat('ms', Number.isFinite(scan?.durationMs) ? `${scan.durationMs} ms` : '—', t('k.durationMs')),
                 ),
                 scanStatus,
+              h(
+                'label',
+                { 'data-file-maid': 'exportrow' },
+                h('input', {
+                  type: 'checkbox',
+                  checked: exportWanted,
+                  disabled: readonly,
+                  'aria-describedby': readonly ? 'export-readonly' : undefined,
+                  onChange: (event) => {
+                    const next = event.target.checked;
+                    setExportWanted(next);
+                    try {
+                      window.localStorage.setItem(exportKey, next ? '1' : '0');
+                    } catch {
+                      /* a browser without storage still gets the checkbox */
+                    }
+                  },
+                }),
+                h('span', null, t('scan.export')),
+              ),
+              readonly ? h('div', { 'data-file-maid': 'scannote', id: 'export-readonly' }, t('scan.exportReadonly')) : null,
               ),
               scanAction,
             ),
@@ -2259,9 +2526,55 @@ window.__ModuleLoader__.load({
            */
           const runScan = async () => {
             setScanBusy(true);
-            const result = await callRemote('scan', root, readerId);
+            const result = await callRemote('scan', root, readerId, JSON.stringify({ report: true, export: exportWanted ? 'json' : 'none' }));
             setScanBusy(false);
             setScanNotice(result?.ok === true ? '' : describeError(result, t('scan.failed')));
+            setRevision((value) => value + 1);
+          };
+
+          /** Preference key: whether the next scan should also write the export. */
+          const exportKey = `dsh-file-maid.export.${root}`;
+          React.useEffect(() => {
+            try {
+              setExportWanted(window.localStorage.getItem(exportKey) === '1');
+            } catch {
+              setExportWanted(false);
+            }
+          }, [exportKey]);
+
+          /**
+           * Read the rich leak list once per snapshot.
+           *
+           * It is a real walk of the tree, so it only runs when the card is showing
+           * the scan page and there is something to look at.
+           * @param {string} key - cache key (`root` + the projection's `generatedAt`).
+           * @returns {Promise<void>} fulfillment after the state settles.
+           */
+          const loadReview = async (key) => {
+            if (review.phase === 'loading' && review.key === key) return;
+            setReview({ key, phase: 'loading', data: null, message: '' });
+            const result = await callRemote('review', root, readerId);
+            if (result?.ok === true) setReview({ key, phase: 'ok', data: result.value ?? {}, message: '' });
+            else setReview({ key, phase: 'failed', data: null, message: describeError(result, t('scan.reviewFailed')) });
+          };
+
+          /**
+           * Accept or undo one leak.
+           * @param {'ack' | 'unack'} op - what to do.
+           * @param {{ path: string, ctime: number }} item - the leak.
+           * @returns {Promise<void>} fulfillment after the reply.
+           */
+          const changeAck = async (op, item) => {
+            setAckNotice('');
+            const result = await callRemote('ack', root, readerId, JSON.stringify({ op, path: item.path, ctime: item.ctime }));
+            if (result?.ok !== true) {
+              setAckNotice(describeError(result, t('scan.ackFailed')));
+              return;
+            }
+            setAckedLocal((list) => (op === 'ack'
+              ? [...list, `${item.path}@${item.ctime}`]
+              : list.filter((key) => key !== `${item.path}@${item.ctime}`)));
+            if (op === 'ack') setAckNotice(fill(t('scan.ackDone'), { name: item.path.split('/').pop() }));
             setRevision((value) => value + 1);
           };
 

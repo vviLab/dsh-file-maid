@@ -463,3 +463,105 @@ test('T-18 maid_review works in a read-only session and writes nothing', async (
   const statusAfter = await readFile(join(root, '.maid', 'status.json'), 'utf8').catch(() => '');
   assert.equal(statusAfter, statusBefore, 'a review does not touch the projection');
 });
+
+test('EX-01 an export lands beside the report under the same stem', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+
+  const result = await tool(registered, 'maid_scan').execute({ report: true, export: 'json' }, exec(agent));
+  assert.equal(result.verdict, 'OK');
+  const stem = result.data.report.replace(/\.md$/u, '');
+  assert.equal(result.data.export, `${stem}.json`);
+  const doc = JSON.parse(await readFile(join(root, result.data.export), 'utf8'));
+  assert.equal(doc.schemaVersion, '1');
+  assert.ok(Array.isArray(doc.missing));
+  assert.equal(typeof doc.counts.new_files, 'number');
+});
+
+test('EX-02 a coverage hole exports counts as unknown, not zero', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  // A rotation inside the window is a hole; the export must not read as "nothing leaked".
+  await writeFile(join(root, '.maid', 'rotation.json'), JSON.stringify({ decisions: new Date(Date.now() + 1000).toISOString() }));
+
+  const result = await tool(registered, 'maid_scan').execute({ export: 'json' }, exec(agent));
+  const doc = JSON.parse(await readFile(join(root, result.data.export), 'utf8'));
+  assert.equal(doc.coverage.ledger && doc.coverage.decisions, false);
+  assert.deepEqual(doc.missing, []);
+  assert.equal(doc.counts.residual, null);
+});
+
+test('EX-03 the export can stand alone, and the budget counts pairs', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+
+  const alone = await tool(registered, 'maid_scan').execute({ export: 'json' }, exec(agent));
+  assert.equal(alone.data.report, null, 'no markdown was asked for');
+  assert.ok(alone.data.export.endsWith('.json'));
+  assert.equal(await readFile(join(root, alone.data.export), 'utf8').then(() => true).catch(() => false), true);
+});
+
+test('EX-04 pruning drops a pair when the budget turns over', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+
+  // 31 pairs is one over the budget; the oldest pair goes, md and json together.
+  await mkdir(join(root, '.maid', 'reports'), { recursive: true });
+  for (let index = 0; index < 31; index += 1) {
+    const stamp = new Date(Date.now() - (index + 1) * 60000);
+    const pad = (value) => String(value).padStart(2, '0');
+    const name = `scan-${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}-${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}`;
+    await writeFile(join(root, '.maid', 'reports', `${name}.md`), 'x');
+    await writeFile(join(root, '.maid', 'reports', `${name}.json`), '{}');
+  }
+  const result = await tool(registered, 'maid_scan').execute({ export: 'json' }, exec(agent));
+  assert.equal(result.verdict, 'OK');
+  const left = await readdir(join(root, '.maid', 'reports'));
+  const stems = new Set(left.map((name) => name.replace(/\.(md|json)$/u, '')));
+  assert.ok(stems.size <= 30, `kept ${stems.size} pairs`);
+  // Whatever survived, every stem keeps both halves.
+  for (const stem of stems) {
+    const hasMd = left.includes(`${stem}.md`);
+    const hasJson = left.includes(`${stem}.json`);
+    assert.ok(hasMd || hasJson);
+  }
+});

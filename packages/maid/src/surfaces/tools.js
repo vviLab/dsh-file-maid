@@ -95,6 +95,45 @@ export function reportName(stamp) {
 }
 
 /**
+ * The machine-readable export that sits beside the markdown report (`§6`).
+ *
+ * JSON rather than CSV for one decisive reason: when the window has a coverage
+ * hole the list is unknown, not empty, and CSV has no third state — a reader would
+ * take "cannot tell" for "nothing leaked".
+ * @param {{ root: string, outcome: object, catalog?: object }} input - what the scan produced.
+ * @returns {object} the export document.
+ */
+export function exportDocument(input) {
+  const outcome = input.outcome ?? {};
+  const reconcile = outcome.reconcile ?? {};
+  return {
+    schemaVersion: '1',
+    root: input.root,
+    generatedAt: new Date().toISOString(),
+    window: { since: outcome.windowStart ?? null },
+    scan: {
+      files: outcome.files ?? 0,
+      dirs: outcome.dirs ?? 0,
+      elapsedMs: outcome.elapsed ?? 0,
+      degraded: outcome.degraded === true,
+      baseline: outcome.baseline === true,
+    },
+    coverage: { decisions: reconcile.recorded_incomplete !== true, ledger: reconcile.ledger_incomplete !== true },
+    counts: {
+      new_files: reconcile.new_files ?? null,
+      recorded_files: reconcile.recorded_files ?? null,
+      ledger_files: reconcile.ledger_files ?? null,
+      missing: Array.isArray(reconcile.missing) ? reconcile.missing.length : null,
+      acknowledged_files: reconcile.acknowledged_files ?? null,
+      missing_total: reconcile.missing_total ?? null,
+      residual: reconcile.residual ?? null,
+    },
+    truncated: reconcile.truncated === true,
+    missing: Array.isArray(reconcile.missing) ? reconcile.missing : [],
+  };
+}
+
+/**
  * Render one scan report.
  * @param {{ root: string, outcome: object, catalog: object | undefined }} input - report inputs.
  * @returns {string} markdown.
@@ -433,6 +472,7 @@ export function createTools(options) {
         properties: {
           scope: { type: 'string', enum: ['managed', 'root'], description: 'managed 只扫声明目录（默认）；root 扫整棵树' },
           report: { type: 'boolean', description: '是否落一份 markdown 报告，默认 false' },
+          export: { type: 'string', enum: ['none', 'json'], description: '是否同时落一份机器可读清单（与报告同名），默认 none' },
         },
         additionalProperties: false,
       },
@@ -440,6 +480,7 @@ export function createTools(options) {
       async execute(args, exec) {
         const scope = args?.scope === 'root' ? 'root' : 'managed';
         const wantReport = args?.report === true;
+        const wantExport = args?.export === 'json';
         const { entry, root } = entryFor(exec);
         if (entry === undefined || root === undefined) return failure('E_MAID_NO_ROOT', 'this session has no session.header.cwd');
 
@@ -465,13 +506,27 @@ export function createTools(options) {
 
         const outcome = await roots.scan(entry, 'tool');
         let reportPath;
-        if (wantReport && !readOnly) {
+        let exportPath;
+        if ((wantReport || wantExport) && !readOnly) {
           const name = reportName(now());
-          try {
-            await store.writeReport(root, name, renderReport({ root, outcome, catalog: status.catalog }));
-            reportPath = `.maid/reports/${name}`;
-          } catch {
-            reportPath = undefined;
+          // The pair shares one stem. A failed export must not roll back the report:
+          // they are two files with two outcomes, and the reply says which landed.
+          if (wantReport) {
+            try {
+              await store.writeReport(root, name, renderReport({ root, outcome, catalog: status.catalog }));
+              reportPath = `.maid/reports/${name}`;
+            } catch {
+              reportPath = undefined;
+            }
+          }
+          if (wantExport) {
+            try {
+              const jsonName = name.replace(/\.md$/u, '.json');
+              await store.writeScanExport(root, jsonName, exportDocument({ root, outcome, catalog: status.catalog }));
+              exportPath = `.maid/reports/${jsonName}`;
+            } catch {
+              exportPath = undefined;
+            }
           }
         }
         return envelope({
@@ -488,6 +543,7 @@ export function createTools(options) {
             ledger: outcome.reconcile?.ledger ?? 0,
             missing: outcome.reconcile?.missing ?? [],
             report: reportPath ?? null,
+            export: exportPath ?? null,
             persisted: !readOnly,
           },
           warnings: readOnly ? [{ code: 'E_MAID_READ_ONLY', message: 'read-only session: nothing persisted' }] : status.warnings,

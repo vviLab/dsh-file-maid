@@ -28,7 +28,9 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | 已退出 | 返回 `NOT_MANAGED`，无 error，提示词节消失 |
 | 配置损坏 | 返回 `ERROR` 并带行列号，提示词节消失 |
 
-初始化在侧栏卡片完成，`maid_init {mode:'init'|'interview'}` 只回 `E_MAID_CARD_REQUIRED`；`defer` 不写盘，`opt_out` 写 `.maid/opt-out`。
+初始化在侧栏卡片完成，`maid_init {mode}` 只接受 `defer` 与 `opt_out`（其余回 `E_MAID_CARD_REQUIRED` 语义）；`defer` 不写盘，`opt_out` 写 `.maid/opt-out`。
+
+**查找未登记的改动时用 `maid_review`，不要用 `maid_scan`**：扫描会覆写 `index.json` 把窗口推走，看一眼就等于放弃追查；复核只测量。确认（「这条我认了」）写在 `.maid/acknowledged.json`，键是 `path@ctime`——同一路径后续再被改写会重新出现。
 
 ## 四个工具
 
@@ -37,7 +39,8 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | `maid_put {name,content,intent?,dir?,overwrite?}` | 三级裁决后原子写入，返回 `decided_by`、`intent_source`、`candidates`、`violations` | 是 |
 | `maid_route {name,intent?,dir?}` | 同一条裁决链，只回答落点与候选 | 否 |
 | `maid_init {mode}` | 初始化入口，只接受 `defer` 与 `opt_out` | 视 mode |
-| `maid_scan {scope?,report?}` | 目录巡检 + 基线对账，可选落 `reports/scan-*.md` | 报告 |
+| `maid_review {}` | 只测量：列出上次扫描以来没记账的改动（带体积与变更时间），不推进基线、不写盘 | 否 |
+| `maid_scan {scope?,report?,export?}` | 目录巡检 + 基线对账，可选落 `reports/scan-*.md`，`export:'json'` 再落同茎 `.json` | 报告／清单 |
 
 四个工具共用同一信封 `{schemaVersion, verdict, data, errors, warnings}`，从不抛异常。
 

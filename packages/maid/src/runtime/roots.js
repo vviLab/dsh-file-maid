@@ -279,6 +279,7 @@ export function createRoots(options) {
         residual: reconciliation.residual,
       },
       missing: reconciliation.missing,
+      acknowledged: Object.entries(storedAcks.entries).map(([path, value]) => ({ path, at: value.at, ctime: value.ctime })),
       dirs: reconciliation.top_dirs,
     };
   };

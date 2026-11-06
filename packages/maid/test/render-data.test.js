@@ -35,7 +35,15 @@ const STATUS = {
     ],
   },
   scan: { at: '2026-11-05T12:00:00.000Z', files: 41, dirs: 7, ms: 52, degraded: false },
-  reconcile: { new_files: 3, recorded: 1, ledger: 1, missing: ['80-Outputs/漏网.md'], residual: 1 },
+  reconcile: {
+    new_files: 3,
+    recorded: 1,
+    ledger: 1,
+    missing: [{ path: '80-Outputs/漏网.md', dir: '80-Outputs' }],
+    acknowledged_files: 0,
+    missing_total: 2,
+    residual: 1,
+  },
   routes: [{ at: '2026-11-05T11:59:00.000Z', name: '报告.md', dir: '80-Outputs', decided_by: 'default', intent_source: 'param' }],
 };
 
@@ -217,19 +225,49 @@ async function mount({ page } = {}) {
     },
     get: () => ({ header: { cwd: STATUS.root } }),
   };
+  const remote = {
+    fileMaid: {
+      // The carrier wraps the service reply, and the service reply wraps the value:
+      // callRemote() strips only the outer layer.
+      review: async () => ({
+        ok: true,
+        value: {
+          ok: true,
+          value: {
+            measuredAt: STATUS.generatedAt,
+            baseline: false,
+            truncated: false,
+            candidateLimit: 500,
+            coverage: { decisions: true, ledger: true },
+            counts: { new_files: 3, recorded_files: 1, ledger_files: 1, missing: 1, acknowledged_files: 0, missing_total: 2, residual: 1 },
+            readOnly: false,
+            acknowledged: [],
+            missing: [
+              { path: '80-Outputs/漏网.md', dir: '80-Outputs', ctime: Date.parse('2026-11-05T11:59:30.000Z'), size: 1258291, kind: 'file' },
+            ],
+          },
+        },
+      }),
+      ack: async () => ({ ok: true, value: { ok: true, value: { revision: 1, counts: null } } }),
+    },
+    workspaceFiles: {
+      stat: async () => ({ ok: true, value: { size: text.length } }),
+      read: async () => ({ ok: true, value: { text, offset: 1, lines: text.split('\n').length, eof: true } }),
+    },
+  };
   const ctx = {
     locale: Object.assign((key) => key, { bind: () => (key) => key, register: () => () => {} }),
     effect: (fn) => { try { fn(); } catch { /* mount errors surface below */ } return () => {}; },
     slots: { register: () => () => {}, inject: () => () => {} },
     tools: { register: () => () => {} },
     sessions,
-    remote: {
-      workspaceFiles: {
-        stat: async () => ({ ok: true, value: { size: text.length } }),
-        read: async () => ({ ok: true, value: { text, offset: 1, lines: text.split('\n').length, eof: true } }),
-      },
+    remote,
+    get: (name) => {
+      if (name === 'sessions') return sessions;
+      if (name === 'remote') return remote;
+      if (name === 'remote.fileMaid') return remote.fileMaid;
+      return undefined;
     },
-    get: (name) => (name === 'sessions' ? sessions : undefined),
     on: () => () => {},
     inject: () => ({ dispose: () => {} }),
     provide: () => {},
@@ -309,4 +347,14 @@ test('RD-07 switching to the scan page renders its accounts from the snapshot', 
   const { texts, hooks } = await mount({ page: 'scan' });
   assert.ok(texts.some((value) => value.includes('41')), 'the file count from the snapshot is shown');
   assert.ok(hooks.has('scangroup'), 'the scan page built its groups');
+});
+
+test('RD-08 the scan page builds the rich leak rows from the review reply', async () => {
+  const { texts, hooks } = await mount({ page: 'scan' });
+  assert.ok(hooks.has('missrow'), 'a two-line leak row was built');
+  assert.ok(hooks.has('misstoggle'), 'the row is a disclosure button');
+  assert.ok(hooks.has('missname'), 'the file name has its own hook');
+  assert.ok(hooks.has('missdim'), 'the owner and the size have their own hook');
+  assert.ok(texts.some((value) => value.includes('1.2 MB')), 'the size column shows a human number');
+  assert.ok(texts.some((value) => value.includes('漏网.md')), 'the name is shown, not the whole path');
 });

@@ -360,8 +360,31 @@ async function rotateLog(target) {
 export async function writeReport(root, name, content) {
   const paths = await ensureMaidDir(root);
   await probe.ensureDirectory(paths.reports, 0o700);
-  const pruned = await pruneReports(root);
+  // Write first, then prune: the budget counts the file just written, so the
+  // directory never sits one over between two scans.
   await probe.writeFileAtomic(join(paths.reports, name), content, { mode: 0o600, dirMode: 0o700 });
+  const pruned = await pruneReports(root);
+  for (const removed of pruned) {
+    await appendLog(root, 'audit', { action: 'report-pruned', target: removed });
+  }
+  return { pruned };
+}
+
+/**
+ * Write the machine-readable export beside a scan report (`§6`).
+ *
+ * Same stem as the report so the two stay a pair, and the same prune runs first,
+ * which is why the budget counts pairs.
+ * @param {string} root - absolute controlled root.
+ * @param {string} name - file name ending in `.json`.
+ * @param {object} payload - the export document.
+ * @returns {Promise<{ pruned: string[] }>} reports removed to stay inside the budget.
+ */
+export async function writeScanExport(root, name, payload) {
+  const paths = await ensureMaidDir(root);
+  await probe.ensureDirectory(paths.reports, 0o700);
+  await probe.writeFileAtomic(join(paths.reports, name), `${JSON.stringify(payload, null, 2)}\n`, { mode: 0o600, dirMode: 0o700 });
+  const pruned = await pruneReports(root);
   for (const removed of pruned) {
     await appendLog(root, 'audit', { action: 'report-pruned', target: removed });
   }
@@ -377,18 +400,22 @@ export async function pruneReports(root) {
   const paths = pathsFor(root);
   const entries = await probe.listDirectory(paths.reports);
   const reports = entries
-    .filter((entry) => entry.isFile() && /^scan-\d{8}-\d{6}\.md$/u.test(entry.name))
+    .filter((entry) => entry.isFile() && /^scan-\d{8}-\d{6}\.(md|json)$/u.test(entry.name))
     .map((entry) => entry.name)
     .sort();
   const removed = [];
   const now = Date.now();
-  const keepFrom = Math.max(0, reports.length - REPORT_FILES_KEPT);
-  for (let index = 0; index < reports.length; index += 1) {
-    const name = reports[index];
-    const match = /^scan-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.md$/u.exec(name);
+  // A report and its export share one stem; they are kept or dropped together, so
+  // the budget counts pairs rather than files.
+  const stems = [...new Set(reports.map((name) => name.replace(/\.(md|json)$/u, '')))].sort();
+  const keepFrom = Math.max(0, stems.length - REPORT_FILES_KEPT);
+  const keep = new Set(stems.slice(keepFrom));
+  for (const name of reports) {
+    const stem = name.replace(/\.(md|json)$/u, '');
+    const match = /^scan-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/u.exec(stem);
     const parsed = match === null ? Number.NaN : Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}Z`);
     const tooOld = Number.isFinite(parsed) && now - parsed > REPORT_MAX_AGE_MS;
-    if (index < keepFrom || tooOld) {
+    if (!keep.has(stem) || tooOld) {
       await probe.removeIfPresent(join(paths.reports, name));
       removed.push(name);
     }
