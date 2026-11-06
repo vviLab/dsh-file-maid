@@ -10,8 +10,8 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 
 | 用例 | 锁住它的测试 | 文件 |
 | --- | --- | --- |
-| C-01 | C-01 a complete catalog validates and normalizes | `core.test.js` |
-| C-02 | C-02 version must be 1 | `core.test.js` |
+| C-01 | C-01 a scan keeps only files whose ctime is inside the window | `core.test.js` |
+| C-02 | C-02 the candidate list stops at the limit and says so | `core.test.js` |
 | C-03 | C-03 dirs must be non-empty and paths unique | `core.test.js` |
 | C-03b | C-03b a retired role field is accepted and never written back | `core.test.js` |
 | C-04 | C-04 root_default must be one of the declared directories | `core.test.js` |
@@ -31,17 +31,17 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | R-02 | R-02 the first scan is a baseline and reports no gap | `core.test.js` |
 | R-03 | R-03 deletions never produce a negative gap | `core.test.js` |
 | R-04 | R-04 a quiet window reports a zero gap | `core.test.js` |
-| M-01 | M-01 add declares a directory and creates the folder | `manage.test.js` |
+| M-01 | M-01 add declares a folder that already exists on disk | `manage.test.js` |
 | M-02 | M-02 add refuses a directory that is already declared | `manage.test.js` |
 | M-03 | M-03 update rewrites purpose and terms, keeping the path | `manage.test.js` |
 | M-04 | M-04 removing the default output is refused | `manage.test.js` |
 | M-05 | M-05 removing another directory keeps its files and reprojects | `manage.test.js` |
 | M-06 | M-06 a root the session does not own is refused before any read | `manage.test.js` |
-| M-07 | M-07 the descriptors name the two endpoints and the service carries them | `manage.test.js` |
+| M-07 | M-07 the descriptors name the four endpoints and the service carries them | `manage.test.js` |
 | M-08 | M-08 the folder dialog answer is returned as a path inside the root | `manage.test.js` |
 | M-09 | M-09 a cancelled dialog and an outside folder are both answered, not thrown | `manage.test.js` |
-| PL-01 | PL-01 the plugin exports one name and the two services it needs | `plugin.test.js` |
-| PL-02 | PL-02 apply registers one prompt section, four tools, four hooks and two lifecycle handlers | `plugin.test.js` |
+| PL-01 | PL-01 the plugin exports one name and the services it needs | `plugin.test.js` |
+| PL-02 | PL-02 apply registers one prompt section, four tools, five hooks and two lifecycle handlers | `plugin.test.js` |
 | PL-03 | PL-03 a host without the prompt service fails the mount instead of loading silently | `plugin.test.js` |
 | I-01 | I-01 an absolute .maid path is refused lexically | `policy.test.js` |
 | I-01 | I-01 a relative .maid path is refused lexically | `policy.test.js` |
@@ -96,7 +96,7 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-07 | UI-07 the card mounts the management endpoints | `ui.test.js` |
 | UI-08 | UI-08 the three pages are 目录 / 日志 / 扫描 in both locales | `ui.test.js` |
 | UI-09 | UI-09 the tablist and its panel stay adjacent in the card | `ui.test.js` |
-| UI-10 | UI-10 every data-file-maid hook a CSS rule styles is produced by the renderer | `ui.test.js` |
+| UI-10 | UI-10 no hook selector uses prefix or substring matching | `ui.test.js` |
 
 ## 写入账本与漏网对账
 
@@ -106,8 +106,8 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | L-02/L-03 | L-02 and L-03 read observations stay out of the ledger | `ledger.test.js` |
 | L-04 | L-04 a read-only session records nothing | `ledger.test.js` |
 | L-05 | L-05 a path outside the root is not recorded | `ledger.test.js` |
-| C-01 | C-01 a scan keeps only files whose ctime is inside the window | `ledger.test.js` |
-| C-02 | C-02 the candidate list stops at the limit and says so | `ledger.test.js` |
+| C-01 | C-01 a complete catalog validates and normalizes | `ledger.test.js` |
+| C-02 | C-02 version must be 1 | `ledger.test.js` |
 | R-20 | R-20 the four quantities add up | `ledger.test.js` |
 | R-21 | R-21 one path written twice is named once | `ledger.test.js` |
 | R-22 | R-22 a ledger that starts late marks the window incomplete | `ledger.test.js` |
@@ -198,28 +198,33 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 
 | 用例 | 锁住它的测试 | 文件 |
 | --- | --- | --- |
-| M-46 | M-46 the default directory can be pointed at another row | `manage.test.js` |
-| M-47 | M-47 a default pointing at an undeclared folder is refused | `manage.test.js` |
-| UI-63 | UI-63 every row except the default one offers a one-click default | `ui.test.js` |
+| M-46 | M-46 a row can be made the fallback while it is being edited | `manage.test.js` |
+| M-47 | M-47 an edit that does not ask for the fallback leaves it alone | `manage.test.js` |
+| UI-63 | UI-63 the fallback is chosen inside the edit form, in words a user can act on | `ui.test.js` |
 
+## 卡片行为
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
 | UI-64 | UI-64 the card keeps itself current without a refresh button | `ui.test.js` |
-
 | UI-65 | UI-65 the badge bubble only appears when it says something new | `ui.test.js` |
-
-| UI-66 | UI-66 the degraded notice talks about speed, and the scope is stated once | `ui.test.js` |
-
-| UI-67 | UI-67 a slow scan tints the dot, not the state word | `ui.test.js` |
-
-| UI-68 | UI-68 the fallback row says so in words, not a glyph | `ui.test.js` |
-
+| UI-66 | UI-66 a slow scan is reported as speed, and the card carries no footnote | `ui.test.js` |
+| UI-67 | UI-67 scan speed never touches the state badge or its tooltip | `ui.test.js` |
+| UI-68 | UI-68 the fallback row is a star with the meaning on hover | `ui.test.js` |
 | UI-69 | UI-69 the setup path can be typed or picked from the folder dialog | `ui.test.js` |
+| UI-71 | UI-71 the two dictionaries agree, and the card stopped promising what it does not do | `ui.test.js` |
+| UI-72 | UI-72 one colour language: primary actions are branded, everything else is neutral | `ui.test.js` |
 
+## 长度上限
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
 | C-09 | C-09 a purpose or excludes sentence has a length ceiling | `core.test.js` |
 | M-48 | M-48 a too-long purpose is refused in words the card can show | `manage.test.js` |
 | UI-70 | UI-70 long sentences are stopped in the form and the table warns when it grows | `ui.test.js` |
 
-| UI-71 | UI-71 the two dictionaries agree, and the card stopped promising what it does not do | `ui.test.js` |
+## 对账口径
 
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
 | R-27 | R-27 the two channels report files, so the card can add them up | `ledger.test.js` |
-
-| UI-72 | UI-72 one colour language: primary actions are branded, everything else is neutral | `ui.test.js` |
