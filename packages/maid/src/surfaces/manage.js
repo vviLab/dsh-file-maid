@@ -11,7 +11,7 @@
 import { execFile } from 'node:child_process';
 import { lstat, realpath, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
-import { validateCatalog } from '../core/catalog.js';
+import { EXCLUDES_MAX, PURPOSE_MAX, validateCatalog } from '../core/catalog.js';
 import { canonicalCatalogPath, validateCatalogPath } from '../core/path.js';
 import * as store from '../state/store.js';
 import { isReadOnlySession } from '../runtime/permissions.js';
@@ -417,6 +417,25 @@ export function createManageSurface(options) {
    * @param {string} input - what the card typed or picked.
    * @returns {Promise<object | null>} the description, or null for an empty input.
    */
+  /**
+   * Turn the parser's diagnostics into the sentence a person can act on.
+   *
+   * `validateCatalog` speaks in field paths, which is right for a config file and
+   * wrong for a card; these codes are the ones a normal edit can reach.
+   * @param {Array<{ code: string, message: string, path?: string }>} diagnostics - parser output.
+   * @returns {Array<{ code: string, message: string, path?: string }>} card-ready errors.
+   */
+  const humanErrors = (diagnostics) =>
+    (Array.isArray(diagnostics) ? diagnostics : []).map((item) => {
+      if (item?.code === 'E_MAID_PURPOSE_LONG') {
+        return { ...item, message: `用途最多 ${PURPOSE_MAX} 个字，把一句话写短一些。` };
+      }
+      if (item?.code === 'E_MAID_EXCLUDES_LONG') {
+        return { ...item, message: `排除最多 ${EXCLUDES_MAX} 个字。` };
+      }
+      return item;
+    });
+
   const describePath = async (root, input) => {
     const typed = typeof input === 'string' ? input.trim() : '';
     if (typed === '') return null;
@@ -512,7 +531,7 @@ export function createManageSurface(options) {
       return { ok: false, errors: [{ code: 'E_MAID_DEFAULT_MISSING', message: '选一个「没命中时放这里」的目录，判断不出来的文件会进它。', path: '' }] };
     }
     const verdict = validateCatalog({ version: 1, root_default: rootDefault, dirs, rules: [] });
-    if (!verdict.ok) return { ok: false, errors: verdict.errors };
+    if (!verdict.ok) return { ok: false, errors: humanErrors(verdict.errors) };
 
     return withRootLock(owned.root, async () => {
       const loaded = await store.readCatalog(owned.root);
@@ -689,7 +708,7 @@ export function createManageSurface(options) {
       if (!next.ok) return { ok: false, errors: next.errors };
 
       const verdict = validateCatalog({ version: 1, root_default: next.rootDefault, dirs: next.dirs, rules: loaded.catalog.rules });
-      if (!verdict.ok) return { ok: false, errors: verdict.errors };
+      if (!verdict.ok) return { ok: false, errors: humanErrors(verdict.errors) };
 
       try {
         await store.writeCatalog(owned.root, store.serializeCatalog(verdict.catalog, { root: owned.root }));

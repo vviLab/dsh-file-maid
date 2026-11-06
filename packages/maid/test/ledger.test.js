@@ -329,7 +329,29 @@ test('UI-11 the scan page offers a rerun button and a blind-spot list', async ()
   assert.match(body, /descriptorOf\('scan', \['root', 'sessionId'\]\)/u, 'the card must mount the scan descriptor');
   assert.doesNotMatch(body, /'scanactions'/u, 'the action must not own a row of its own');
   assert.match(body, /'scan\.scanNow': '立即扫描'/u, 'the empty state offers a scan');
-  assert.match(body, /'scan\.leakCount': '漏网 \{n\}'/u, 'the leak count belongs to the reconcile head');
-  assert.match(body, /'k\.ledger': '账本'/u);
+  assert.match(body, /'scan\.leakCount': '\{n\} 个改动没被记账'/u, 'the leak count belongs to the reconcile head');
+  assert.match(body, /'k\.ledger': '经工具写盘'/u);
 });
 
+
+test('R-27 the two channels report files, so the card can add them up', async () => {
+  const before = { files: 10, dirs: { '80-Outputs': 5 }, roots: { '80-Outputs': { files: 5 } } };
+  const after = { files: 11, dirs: { '80-Outputs': 6 }, roots: { '80-Outputs': { files: 6 } } };
+  // One file written twice through the ledger: two records, one file.
+  const ledgerPaths = new Set(['80-Outputs/once.md']);
+  const recordedPaths = new Set();
+  const result = reconcile({
+    before,
+    after,
+    recorded: 0,
+    ledger: 2,
+    recordedPaths,
+    ledgerPaths,
+    candidates: [{ path: '80-Outputs/once.md', dir: '80-Outputs' }],
+  });
+  assert.equal(result.new_files, 1);
+  assert.equal(result.ledger_files, 1, 'two records of one file count once');
+  assert.equal(result.recorded_files, 0);
+  assert.equal(result.missing.length, 0);
+  assert.equal(result.residual, 0);
+});

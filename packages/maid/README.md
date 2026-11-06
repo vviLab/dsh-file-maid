@@ -81,7 +81,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | --- | --- |
 | 目录 | `catalog.dirs[]`：路径、用途、排除、文件数（每个会话首次进入时后台数一次；没数过显示 `—`，不是 0） |
 | 路由 | `status.routes[]`：最近的落点判定与依据 |
-| 扫描 | 本次扫描、对账（新增 / 插件通道 / 差额）、根与基线 |
+| 扫描 | 本次扫描、新增文件去哪了（净增 / 经 maid_put / 经工具写盘）、根与基线 |
 
 「目录」页签带一个目录管理器：新建、编辑、删除三个动作，编辑时勾「没命中规则时，文件放这里」即可把它设成判断不出来时归入的目录（`makeDefault: true`），字段是路径 / 用途 / 排除（可空）。写入走四个 Host 端点 `fileMaid/draft`（只校验一条待添加路径）、`fileMaid/pick`、`fileMaid/save` 与 `fileMaid/scan`：
 
@@ -114,14 +114,19 @@ FILE_MAID:MAID_LOCKED:<LEXICAL|INODE|UNVERIFIED> <说明>
 
 ## 对账
 
-下载、导出、`bash` 写入不经 `ctx.fs`，无法事前拦截，只能事后对账。对账分四栏：
+下载、导出、`bash` 写入不经 `ctx.fs`，无法事前拦截，只能事后对账。
 
-| 栏 | 含义 | 来源 |
+扫描范围只有目录表里声明的那些目录：工作区根目录下直接放的文件、没有登记进表的文件夹，都不在统计里，也不会出现在卡片的任何数字中。卡片上不写这句说明，只给数字；需要确认范围时看这里。
+
+卡片上叫「新增文件去哪了」，分四栏：
+
+| 栏（卡片上的名字） | 含义 | 来源 |
 | --- | --- | --- |
-| 增量 | 本次文件数 − 基线文件数 | `index.json` 与本次扫描 |
-| 账本 | 窗口内工具写入条数（`write`/`edit`/`apply_patch`） | `writes.jsonl` |
-| 漏网 | 扫描候选中既无 `decisions.jsonl`、也无 `writes.jsonl` 记录的路径 | 扫描候选（按 ctime） |
-| 残差 | 增量中既没被记账、也没被点名的部分 | 计算；有覆盖缺口时为 `null`（无法计算） |
+| 净增文件 | 本次文件数 − 基线文件数 | `index.json` 与本次扫描 |
+| 经 `maid_put` | 窗口内 `decisions.jsonl` 点名过的**文件数**（同一文件写多次算一个） | `decisions.jsonl` |
+| 经工具写盘 | 窗口内 `writes.jsonl` 点名过的**文件数** | `writes.jsonl` |
+| 没被记账的改动 | 扫描候选中两条通道都没点名的路径 | 扫描候选（按 ctime） |
+| 只体现在总数里 | 净增中既没被记账、也没被点名的部分 | 计算；有覆盖缺口时为 `null`（无法计算） |
 
 扫描候选按 **ctime** 取：`ctime` 是 inode 变更时间，`cp -p`、`rsync -a`、保留时间戳的解压都无法保留它，因此这类写入仍可被定位。代价是改名、`chmod` 会作为候选出现，属于可接受的假阳性。
 
@@ -156,7 +161,7 @@ FILE_MAID:MAID_LOCKED:<LEXICAL|INODE|UNVERIFIED> <说明>
 ## 验证
 
 ```bash
-node --test test/*.test.js         # 181 条单元、集成与渲染用例
+node --test test/*.test.js         # 191 条单元、集成与渲染用例
 node scripts/check-manifest.js     # manifest、补丁、依赖与分层自检
 node scripts/cli.js route --root <dir> --name report.md --intent 报告
 node scripts/cli.js migrate --root <dir>   # v3 catalog → v5，原文件留作 catalog.yml.v3.bak

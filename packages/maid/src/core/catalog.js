@@ -22,6 +22,17 @@ const KNOWN_ROOT_KEYS = new Set(['version', 'root_default', 'dirs', 'rules', 'na
 const KNOWN_DIR_KEYS = new Set(['path', 'role', 'purpose', 'includes', 'excludes', 'examples']);
 
 /**
+ * Longest purpose sentence a directory may carry.
+ *
+ * The table is injected into every system prompt, so one runaway sentence costs
+ * every session in that root. 200 characters is roughly three typed lines.
+ */
+export const PURPOSE_MAX = 200;
+
+/** Longest excludes sentence. Same budget, same reason. */
+export const EXCLUDES_MAX = 200;
+
+/**
  * `role` and `includes` are retired: still accepted so older catalogs keep loading,
  * never written again. A directory is described by its purpose sentence and its
  * refusal list, which is what both a person and the model read.
@@ -144,15 +155,24 @@ export function validateCatalog(raw) {
         return;
       }
       const purpose = typeof record.purpose === 'string' ? record.purpose.trim() : '';
+      if ([...purpose].length > PURPOSE_MAX) {
+        errors.push(diag('E_MAID_PURPOSE_LONG', `${at}.purpose is longer than ${PURPOSE_MAX} characters`, `${at}.purpose`));
+        return;
+      }
       if (purpose.length === 0) {
         // The template ships with empty purposes; a root whose purposes are all
         // empty still loads, it just cannot route well, and the card says so.
         warnings.push(diag('E_MAID_PURPOSE_MISSING', `${at}.purpose is empty; this directory cannot be matched by purpose`, `${at}.purpose`));
       }
+      const excludes = readSentence(record.excludes, `${at}.excludes`, warnings);
+      if ([...excludes].length > EXCLUDES_MAX) {
+        errors.push(diag('E_MAID_EXCLUDES_LONG', `${at}.excludes is longer than ${EXCLUDES_MAX} characters`, `${at}.excludes`));
+        return;
+      }
       dirs.push({
         path,
         purpose,
-        excludes: readSentence(record.excludes, `${at}.excludes`, warnings),
+        excludes,
         examples: readStringArray(record.examples, `${at}.examples`, warnings),
         index: dirs.length,
       });

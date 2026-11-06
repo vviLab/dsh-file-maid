@@ -183,3 +183,20 @@ test('R-04 a quiet window reports a zero gap', () => {
   assert.equal(result.gap_ratio, 0);
   assert.deepEqual(result.top_dirs, []);
 });
+
+test('C-09 a purpose or excludes sentence has a length ceiling', async () => {
+  const base = { version: 1, root_default: '80-Outputs', dirs: [], rules: [] };
+  const long = '很'.repeat(201);
+  const dir = (extra) => ({ path: '80-Outputs', purpose: '收东西', excludes: '', ...extra });
+
+  const ok = validateCatalog({ ...base, dirs: [dir({ purpose: '很'.repeat(200) })] });
+  assert.equal(ok.ok, true, 'exactly at the ceiling still loads');
+
+  const tooLong = validateCatalog({ ...base, dirs: [dir({ purpose: long })] });
+  assert.equal(tooLong.ok, false);
+  assert.equal(tooLong.errors[0].code, 'E_MAID_PURPOSE_LONG');
+
+  const excludes = validateCatalog({ ...base, dirs: [dir({ excludes: long })] });
+  assert.equal(excludes.ok, false);
+  assert.equal(excludes.errors[0].code, 'E_MAID_EXCLUDES_LONG');
+});

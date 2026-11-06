@@ -205,3 +205,21 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | UI-64 | UI-64 the card keeps itself current without a refresh button | `ui.test.js` |
 
 | UI-65 | UI-65 the badge bubble only appears when it says something new | `ui.test.js` |
+
+| UI-66 | UI-66 the degraded notice talks about speed, and the scope is stated once | `ui.test.js` |
+
+| UI-67 | UI-67 a slow scan tints the dot, not the state word | `ui.test.js` |
+
+| UI-68 | UI-68 the fallback row says so in words, not a glyph | `ui.test.js` |
+
+| UI-69 | UI-69 the setup path can be typed or picked from the folder dialog | `ui.test.js` |
+
+| C-09 | C-09 a purpose or excludes sentence has a length ceiling | `core.test.js` |
+| M-48 | M-48 a too-long purpose is refused in words the card can show | `manage.test.js` |
+| UI-70 | UI-70 long sentences are stopped in the form and the table warns when it grows | `ui.test.js` |
+
+| UI-71 | UI-71 the two dictionaries agree, and the card stopped promising what it does not do | `ui.test.js` |
+
+| R-27 | R-27 the two channels report files, so the card can add them up | `ledger.test.js` |
+
+| UI-72 | UI-72 one colour language: primary actions are branded, everything else is neutral | `ui.test.js` |

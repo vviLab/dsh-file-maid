@@ -49,6 +49,24 @@ async function makeRoot() {
   return root;
 }
 
+/**
+ * The first style rule whose selector reaches `hook`.
+ *
+ * Controls now share colour rules, so "the hook has its own rule" stopped being a
+ * meaningful assertion; what matters is the rule that actually applies.
+ * @param {string} body - client source.
+ * @param {string} hook - data-file-maid value.
+ * @returns {string} the declarations of every rule that reaches the hook.
+ */
+function effectiveRule(body, hook) {
+  const rules = [...body.matchAll(/'\[data-file-maid="([^"]+)"\][^']*\{([^}]*)\}'/gu)];
+  const hit = [];
+  for (const rule of rules) {
+    if (rule[0].includes(`[data-file-maid="${hook}"]`)) hit.push(rule[2]);
+  }
+  return hit.join(' ');
+}
+
 test('UI-01 a managed scan writes the v2 status document the panel reads', async (t) => {
   const root = await makeRoot();
   const roots = createRoots({ ctx: stubContext() });
@@ -172,8 +190,9 @@ test('UI-08 the three pages are 目录 / 日志 / 扫描 in both locales', async
   assert.match(body, /'view\.scan': '扫描'/u);
   assert.match(body, /'view\.dirs': 'Directories'/u);
   assert.match(body, /'view\.misplaced': 'Log'/u);
-  assert.match(body, /'section\.reconcile': '对账'/u);
-  assert.match(body, /'k\.gap': '差额'/u);
+  assert.match(body, /'section\.reconcile': '新增文件去哪了'/u);
+  // `gap` is an internal quantity; the card stopped showing it as a third number.
+  assert.doesNotMatch(body, /'k\.gap'/u);
 });
 
 test('UI-09 the tablist and its panel stay adjacent in the card', async () => {
@@ -354,22 +373,28 @@ test('UI-53 a long workspace name truncates instead of running under the badge',
 
 test('UI-54 the rescan control looks pressable, not like a caption', async () => {
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
-  const rule = body.slice(body.indexOf('[data-file-maid="scanact"]{'), body.indexOf('[data-file-maid="scanact"]:hover'));
+  // Primary controls may share one rule; what matters is that the rule reaching
+  // `scanact` still draws an edge and a 24px target.
+  const rule = effectiveRule(body, 'scanact');
   assert.match(rule, /border:1px solid/u, 'it has an edge');
   assert.match(rule, /border-radius:6px/u);
-  assert.match(rule, /background:var\(--dsw-alias-bg-layer-1/u, 'it has a surface');
   assert.match(rule, /min-height:24px/u, 'it meets the 24px hit target');
+  assert.match(body, /\[data-file-maid="scanact"\]:hover\{[^}]*background:var\(--dsw-alias-interactive-bg-hover/u, 'hover still tints it');
 });
 
 test('UI-55 every interactive control shares one hit height', async () => {
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
-  const controls = ['linkbutton', 'rowact', 'ghostbutton', 'scanact', 'purposemore', 'morebar'];
+  const controls = ['linkbutton', 'ghostbutton', 'scanact', 'purposemore', 'morebar', 'button'];
   for (const hook of controls) {
-    const at = body.indexOf(`'[data-file-maid="${hook}"]{`);
-    assert.ok(at > 0, `${hook} has a base rule`);
-    const rule = body.slice(at, body.indexOf('}', at));
+    const rule = effectiveRule(body, hook);
     assert.match(rule, /min-height:24px/u, `${hook} is 24px tall`);
   }
+  // Row actions read as part of the row, not as a second row: the box is 20px but
+  // the clickable area still reaches 24px through a pseudo-element.
+  const at = body.indexOf(`'[data-file-maid="rowact"]{`);
+  const rule = body.slice(at, body.indexOf('}', at));
+  assert.match(rule, /min-height:20px/u);
+  assert.match(body, /'\[data-file-maid="rowact"\]::after\{content:"";position:absolute;inset:-2px 0;\}'/u);
   const head = body.slice(body.indexOf('[data-file-maid="sectionhead"]{'));
   assert.match(head.slice(0, head.indexOf('}')), /align-items:center/u, 'section heads centre their controls');
 });
@@ -486,4 +511,102 @@ test('UI-65 the badge bubble only appears when it says something new', async () 
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   assert.doesNotMatch(body, /tip: badge\.detail === undefined \|\| badge\.detail === '' \? badge\.label/u, 'the old repeat-the-label fallback is gone');
   assert.match(body, /tip === '' \|\| tip === badge\.label \? mark : h\(StateTip/u);
+});
+
+test('UI-66 a slow scan is reported as speed, and the card carries no footnote', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const zh = body.slice(0, body.indexOf('en: {'));
+  const hint = zh.slice(zh.indexOf("'hint.degraded'"), zh.indexOf("'hint.degradedTitle'"));
+  // The old sentence claimed the scan narrowed its scope when it ran slow; the
+  // scope never depended on speed.
+  assert.doesNotMatch(hint, /区外|跟踪已声明/u);
+  assert.match(hint, /300 毫秒/u);
+  // The card shows numbers only. Where the numbers come from lives in the README.
+  assert.doesNotMatch(body, /scan\.scopeValue/u);
+  assert.doesNotMatch(body, /'scanfacts'/u);
+});
+
+test('UI-67 scan speed never touches the state badge or its tooltip', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const tone = body.slice(body.indexOf('const tone ='), body.indexOf('const stateDetail'));
+  assert.doesNotMatch(tone, /degraded/u, 'scan speed is not a routing state');
+  const detail = body.slice(body.indexOf('const stateDetail'), body.indexOf('const ageText'));
+  assert.doesNotMatch(detail, /degraded/u, 'the tooltip does not repeat the performance note');
+  // It keeps two homes of its own: a dismissible banner, and the 扫描 page line.
+  assert.match(body, /const showDegraded = degraded && !dismissedRoots\.includes\(root\)/u);
+  assert.match(body, /scan\?\.degraded === true \? t\('scan\.degraded'\) : t\('scan\.degradedNone'\)/u);
+});
+
+test('UI-68 the fallback row is a star with the meaning on hover', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.doesNotMatch(body, /'detail\.defaultTag'/u, 'the long inline label is gone');
+  assert.equal((body.match(/tip: t\('detail\.default'\)/gu) ?? []).length, 2, 'both surfaces explain the star');
+  assert.equal((body.match(/'data-file-maid': 'star'/gu) ?? []).length, 2);
+  assert.match(body, /\[data-file-maid="star"\]\{[^}]*cursor:help;/u);
+  // The bubble is a StateTip, never a native title.
+  assert.doesNotMatch(body, /'data-file-maid': 'star', title:/u);
+});
+
+test('UI-69 the setup path can be typed or picked from the folder dialog', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const pickSetupPath = async/u);
+  const row = body.slice(body.indexOf("'data-file-maid': 'setuprowof'"), body.indexOf('setup.problem ==='));
+  assert.match(row, /'data-file-maid': 'setupinput'/u, 'typing still works');
+  assert.match(row, /t\('manage\.pick'\)/u, 'the dialog button sits beside it');
+  assert.match(row, /onBlur: \(\) => void checkSetupPath\(\)/u);
+  // One folder dialog, two callers: the manager form and the setup wizard.
+  assert.match(body, /const askFolder = async/u);
+  assert.equal((body.match(/await askFolder\(\)/gu) ?? []).length, 2);
+});
+
+test('UI-70 long sentences are stopped in the form and the table warns when it grows', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.equal((body.match(/maxLength: 200/gu) ?? []).length, 2, 'purpose and excludes in the manager form');
+  assert.match(body, /maxLength: key === 'path' \? undefined : 200/u, 'the wizard caps purpose and excludes only');
+  assert.match(body, /'setup\.tooMany': '已经有 \{n\} 个目录/u);
+  assert.match(body, /\(setup\?\.dirs \?\? \[\]\)\.length >= 35/u);
+});
+
+test('UI-71 the two dictionaries agree, and the card stopped promising what it does not do', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const zhStart = body.indexOf('const DICT = {');
+  const enMark = body.indexOf('en: {');
+  const zh = body.slice(zhStart, enMark);
+  const en = body.slice(enMark, body.indexOf('\n    };', enMark));
+  const keysOf = (block) => [...block.matchAll(/^\s{6,8}'([\w.]+)':/gmu)].map((match) => match[1]);
+
+  // Same key set both ways, and no key written twice (the duplicate used to hide an
+  // English string inside the Chinese dictionary).
+  assert.deepEqual([...new Set(keysOf(zh))].sort(), [...new Set(keysOf(en))].sort(), 'key sets must match');
+  assert.equal(keysOf(zh).length, new Set(keysOf(zh)).size, 'no duplicate key in zh');
+  assert.equal(keysOf(en).length, new Set(keysOf(en)).size, 'no duplicate key in en');
+
+  // "未观察" had no producer on the host, "体积" was always 0 B, and the footer
+  // claimed a read-only view on a page that edits the catalog.
+  assert.doesNotMatch(body, /label\.watch/u, 'no watching state without a producer');
+  assert.doesNotMatch(body, /formatBytes/u, 'no dead size formatter');
+  assert.doesNotMatch(body, /'readonly'/u, 'no read-only claim next to the edit buttons');
+
+  // A decision record shows why it landed there; the data was already in hand.
+  assert.match(body, /t\('misplaced\.byLabel'\)/u);
+  assert.match(body, /item\.decided_by/u);
+});
+
+test('UI-72 one colour language: primary actions are branded, everything else is neutral', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const primary = effectiveRule(body, 'ghostbutton');
+  const scan = effectiveRule(body, 'scanact');
+  for (const rule of [primary, scan]) {
+    assert.match(rule, /color:var\(--dsw-alias-brand-primary/u, 'primary controls carry the brand colour');
+  }
+  // Secondary controls stay neutral; only the delete affordance turns red, and only
+  // while hovering, so a row never looks like an alarm.
+  const link = effectiveRule(body, 'linkbutton');
+  assert.match(link, /color:var\(--dsw-alias-label-secondary\)/u);
+  assert.doesNotMatch(link, /color:var\(--dsw-alias-brand-primary/u, 'no brand text colour on secondary controls');
+  const more = effectiveRule(body, 'purposemore');
+  assert.match(more, /color:var\(--dsw-alias-label-secondary\)/u, '展开/收起 reads as a control, not an action');
+  assert.match(body, /\[data-file-maid="linkbutton"\]\[data-tone="danger"\]:hover[^{]*\{color:var\(--dsw-alias-state-error-primary/u);
+  assert.match(body, /'data-tone': 'danger', onClick: \(\) => openManage\('remove', dir\)/u);
+  assert.match(body, /'data-tone': 'primary', disabled: manageBusy \|\| !manageReady/u, 'save stays the one primary in the form');
 });

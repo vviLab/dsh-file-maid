@@ -315,3 +315,24 @@ test('M-47 an edit that does not ask for the fallback leaves it alone', async (t
   const after = await store.readCatalog(root);
   assert.equal(after.catalog.rootDefault, before.catalog.rootDefault, 'saving a row does not move the fallback by accident');
 });
+
+test('M-48 a too-long purpose is refused in words the card can show', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'maid-long-'));
+  await mkdir(join(root, '80-Outputs'), { recursive: true });
+  const sessionId = 'session-long';
+  const ctx = { sessions: { get: (id) => (id === sessionId ? { header: { cwd: root } } : undefined) } };
+  const surface = createManageSurface({ ctx, roots: { projectRoot: async () => {} } });
+
+  const result = await surface.service.save(
+    root,
+    sessionId,
+    JSON.stringify({
+      op: 'init',
+      dirs: [{ path: '80-Outputs', purpose: '很'.repeat(201), excludes: '' }],
+      rootDefault: '80-Outputs',
+    }),
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0].code, 'E_MAID_PURPOSE_LONG');
+  assert.match(result.errors[0].message, /最多 200 个字/u, 'not the parser English');
+});

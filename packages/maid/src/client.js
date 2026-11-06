@@ -152,17 +152,13 @@ window.__ModuleLoader__.load({
         'label.workspace': '工作区',
         'role.managed': '受管目录',
         'role.autonomous': '自管目录',
-        'label.uninitialized': '还没启用；让 AI 整理一次文件后开启。',
+        'label.uninitialized': '还没启用。点下面的「启用这个根」建好目录表。',
         'label.default': '没命中时放这里',
         'label.scan': '最近扫描',
         'label.threshold': '阈值',
-        'label.degraded': '已降级',
         'label.baseline': '基线快照',
-        'label.watch': '观察中',
-        'label.watchOff': '未观察',
         'col.dir': '目录',
         'col.files': '文件',
-        'col.size': '体积',
         'col.about': '用途',
         'view.label': '视图',
         'view.dirs': '目录',
@@ -172,12 +168,9 @@ window.__ModuleLoader__.load({
         'k.durationMs': '耗时',
         'k.files': '文件',
         'k.dirs': '目录',
-        'k.degraded': '降级',
         'k.baseline': '基线',
-        'k.watched': '观察',
-        'k.newFiles': '新增',
-        'k.recorded': '插件通道',
-        'k.gap': '差额',
+        'k.newFiles': '净增文件',
+        'k.recorded': '经 maid_put',
         'k.threshold': '阈值',
         'k.weights': '权重',
         'k.hash': '指纹',
@@ -186,7 +179,7 @@ window.__ModuleLoader__.load({
         'section.misplaced': '最近落点',
         'section.scan': '本次扫描',
         'section.params': '判定参数',
-        'section.reconcile': '对账',
+        'section.reconcile': '新增文件去哪了',
         'section.missing': '漏网文件',
         'scan.rerun': '重新扫描',
         'scan.running': '扫描中…',
@@ -195,15 +188,15 @@ window.__ModuleLoader__.load({
         'scan.ledgerIncomplete': '账本未覆盖',
         'scan.scanNow': '立即扫描',
         'scan.freshBaseline': '这是第一次扫描，已记下基线；下次扫描才能看出新增与漏网。',
-        'scan.noLeak': '无漏网',
-        'scan.leakCount': '漏网 {n}',
-        'scan.residual': '另有 {n} 个文件未被列出（时间字段看不出是哪些）',
+        'scan.noLeak': '没有未记账的改动',
+        'scan.leakCount': '{n} 个改动没被记账',
+        'scan.residual': '另有 {n} 个文件只体现在总数变化里，点不出名字',
         'scan.ledgerNote': '账本未覆盖本次窗口，只报数量',
         'scan.recordedIncomplete': '落点日志未覆盖',
         'scan.recordedNote': '本窗口内日志轮转过，清单不可靠，只报数量',
-        'scan.residualUnknown': '本窗口有覆盖缺口，差额无法计算',
-        'scan.factRoot': '根',
-        'k.ledger': '账本',
+        'scan.residualUnknown': '本窗口的日志没覆盖全，算不出这部分数量',
+        'scan.factScope': '统计范围',
+        'k.ledger': '经工具写盘',
         'k.missing': '漏网',
         'section.baseline': '根与基线',
         'weight.keyword': '关键词',
@@ -211,7 +204,7 @@ window.__ModuleLoader__.load({
         'weight.prior': '先验',
         'scan.baselineSet': '有快照',
         'scan.baselineNone': '无快照',
-        'scan.degraded': '已降级',
+        'scan.degraded': '扫描较慢',
         'scan.degradedNone': '正常',
         'scan.empty': '没有扫描记录',
         'scan.emptyHint': '会话进入工作区时会在后台统计一次，几秒后这里出现结果；也可以让我重新扫描。',
@@ -241,8 +234,12 @@ window.__ModuleLoader__.load({
         'misplaced.into': '落点',
         'misplaced.pathLabel': '路径',
         'misplaced.folderLabel': '目录',
+        'misplaced.byLabel': '依据',
+        'detail.byRule': '规则命中',
+        'detail.byAgent': '调用时指定',
+        'detail.byDefault': '没命中时的目录',
         'misplaced.timeLabel': '时间',
-        'hint.notManaged': '已退出管理，不再归类或拦截；删除 .maid/opt-out 后刷新恢复。',
+        'hint.notManaged': '已退出管理：不再自动归类，也不再给模型目录表。`.maid` 的保护仍然生效；删除 `.maid/opt-out` 后刷新可恢复。',
         'hint.absent': '整理一次文件后会显示。',
         'hint.error': '读不到数据',
         'hint.emptyCatalog': '还没有可以归类的文件夹。',
@@ -250,7 +247,7 @@ window.__ModuleLoader__.load({
         'hint.failed': '可以点「刷新」再试一次。',
         'hint.denied': '换一个能读文件的会话。',
         'hint.noRoots': '打开一个会话后显示。',
-        'hint.degraded': '文件太多，只跟踪已声明的目录；区外新文件不会被发现。',
+        'hint.degraded': '这次扫描超过了 300 毫秒。数字照样准，只是慢——文件越多越明显。',
         'hint.degradedTitle': '扫描 {files} 个文件用了 {ms} 毫秒',
         'action.dismiss': '关闭提示',
         'init.action': '初始化这个工作区',
@@ -339,6 +336,7 @@ window.__ModuleLoader__.load({
         'setup.pathHint': '相对工作区根，最多 3 段。',
         'setup.purposePh': '一句话说明这个目录收什么',
         'setup.excludesPh': '一句话说明什么不该放这里（可空）',
+        'setup.tooMany': '已经有 {n} 个目录。目录表太长时，提示词里只列出前面一部分；没列出的仍能按目录名和规则命中。',
         'setup.dup': '这个目录已经加过了',
         'setup.checkFailed': '没能检查这个路径，稍后再试。',
         'setup.count': '{n} 个目录',
@@ -361,7 +359,6 @@ window.__ModuleLoader__.load({
         'setup.errorKept': '已添加的 {n} 个目录还在，可以直接重试。',
         'more.hide': '收起',
         'refresh': '刷新',
-        'readonly': '只读视图 · 不改动任何配置',
         'age.now': '刚刚',
         'age.seconds': '{n} 秒前',
         'age.minutes': '{n} 分钟前',
@@ -385,17 +382,13 @@ window.__ModuleLoader__.load({
         'label.workspace': 'workspace',
         'role.managed': 'managed dir',
         'role.autonomous': 'autonomous dir',
-        'label.uninitialized': 'Not enabled yet; one tidy-up turns it on.',
+        'label.uninitialized': 'Not enabled yet. Set it up from the card below.',
         'label.default': 'default',
         'label.scan': 'last scan',
         'label.threshold': 'threshold',
-        'label.degraded': 'degraded',
         'label.baseline': 'baseline',
-        'label.watch': 'watching',
-        'label.watchOff': 'not watching',
         'col.dir': 'dir',
         'col.files': 'files',
-        'col.size': 'size',
         'col.about': 'purpose',
         'view.label': 'view',
         'view.dirs': 'Directories',
@@ -405,9 +398,7 @@ window.__ModuleLoader__.load({
         'k.durationMs': 'duration',
         'k.files': 'files',
         'k.dirs': 'dirs',
-        'k.degraded': 'degraded',
         'k.baseline': 'baseline',
-        'k.watched': 'watching',
         'k.threshold': 'threshold',
         'k.weights': 'weights',
         'k.hash': 'hash',
@@ -416,7 +407,7 @@ window.__ModuleLoader__.load({
         'section.misplaced': 'Recent decisions',
         'section.scan': 'This scan',
         'section.params': 'Decision rules',
-        'section.reconcile': 'Reconcile',
+        'section.reconcile': 'Where new files went',
         'section.missing': 'Unaccounted files',
         'scan.rerun': 'Scan now',
         'scan.running': 'Scanning…',
@@ -425,16 +416,15 @@ window.__ModuleLoader__.load({
         'scan.ledgerIncomplete': 'ledger does not cover this window',
         'scan.scanNow': 'Scan now',
         'scan.freshBaseline': 'First scan: the baseline is recorded now, so the next scan can show what is new.',
-        'scan.noLeak': 'nothing unaccounted',
-        'scan.leakCount': '{n} unaccounted',
-        'scan.residual': '{n} more could not be named (no usable timestamp)',
+        'scan.noLeak': 'no unrecorded changes',
+        'scan.leakCount': '{n} changes without a record',
+        'scan.residual': '{n} more only show up in the total; they cannot be named',
         'scan.ledgerNote': 'the ledger does not cover this window; counts only',
         'scan.recordedIncomplete': 'decision log rotated',
         'scan.recordedNote': 'the log rotated inside this window, so the list is unreliable; counts only',
         'scan.residualUnknown': 'this window has a coverage gap, so the remainder cannot be computed',
-        'scan.factRoot': 'root',
-        'k.newFiles': 'new',
-        'k.gap': 'gap',
+        'scan.factScope': 'Counted',
+        'k.newFiles': 'new files',
         'k.recorded': 'via plugin',
         'k.ledger': 'Ledger',
         'k.missing': 'Unaccounted',
@@ -444,7 +434,7 @@ window.__ModuleLoader__.load({
         'weight.prior': 'prior',
         'scan.baselineSet': 'snapshot set',
         'scan.baselineNone': 'no snapshot',
-        'scan.degraded': 'degraded',
+        'scan.degraded': 'slow scan',
         'scan.degradedNone': 'normal',
         'scan.empty': 'no scan yet',
         'scan.emptyHint': 'A session counts this workspace in the background as it starts, so numbers appear within seconds.',
@@ -474,8 +464,12 @@ window.__ModuleLoader__.load({
         'misplaced.into': 'into',
         'misplaced.pathLabel': 'path',
         'misplaced.folderLabel': 'folder',
+        'misplaced.byLabel': 'matched by',
+        'detail.byRule': 'a rule',
+        'detail.byAgent': 'named by the caller',
+        'detail.byDefault': 'the fallback folder',
         'misplaced.timeLabel': 'time',
-        'hint.notManaged': 'Opted out: no longer sorts or blocks files. Delete .maid/opt-out and refresh to resume.',
+        'hint.notManaged': 'Opted out: no sorting and no catalog in the prompt. The `.maid` guard still applies; delete `.maid/opt-out` and refresh to resume.',
         'hint.absent': 'It appears after one tidy-up.',
         'hint.error': 'Could not read data',
         'hint.emptyCatalog': 'No folders to organise yet.',
@@ -483,7 +477,7 @@ window.__ModuleLoader__.load({
         'hint.failed': 'Try refresh again in a moment.',
         'hint.denied': 'Switch to a session that can read files.',
         'hint.noRoots': 'Open a session to see its folder.',
-        'hint.degraded': 'Too many files: only managed folders are tracked, so new files outside them go unnoticed.',
+        'hint.degraded': 'This scan took longer than 300 ms. The numbers still hold; it just gets slower as the tree grows.',
         'hint.degradedTitle': '{files} files scanned in {ms} ms',
         'action.dismiss': 'Dismiss',
         'init.action': 'Set up this root',
@@ -572,6 +566,7 @@ window.__ModuleLoader__.load({
         'setup.pathHint': 'Relative to the root, up to 3 segments.',
         'setup.purposePh': 'one line: what belongs here',
         'setup.excludesPh': 'one line on what does not belong; optional',
+        'setup.tooMany': 'That is {n} folders. A long table is cut short in the prompt; the rest still match by name and rule.',
         'setup.dup': 'Already added',
         'setup.checkFailed': 'Could not check the path; try again.',
         'setup.count': '{n} folders',
@@ -594,7 +589,6 @@ window.__ModuleLoader__.load({
         'setup.errorKept': 'The {n} folders are still here; retry.',
         'more.hide': 'Collapse',
         'refresh': 'refresh',
-        'readonly': 'read-only view · changes nothing',
         'age.now': 'just now',
         'age.seconds': '{n}s ago',
         'age.minutes': '{n}m ago',
@@ -891,23 +885,6 @@ window.__ModuleLoader__.load({
       return sameDay ? clock : `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${clock}`;
     }
 
-    /**
-     * Shorten a root path to its last two segments.
-     *
-     * A 252px card row cannot hold `/Users/name/Desktop/Work` without wrapping, and a
-     * plain tail ellipsis would keep exactly the part nobody reads (`/Users/name/…`)
-     * while cutting the leaf that identifies the workspace. The leading segments are
-     * replaced by `…`, the leaf keeps its full width, and the untouched path stays in
-     * the row's `title`.
-     * @param {string|undefined} path - absolute root path.
-     * @returns {string} the shortened path, or `—` when there is none.
-     */
-    function shortRootPath(path) {
-      if (typeof path !== 'string' || path === '') return '—';
-      const parts = path.split('/').filter((part) => part !== '');
-      if (parts.length <= 2) return path;
-      return `…/${parts.slice(-2).join('/')}`;
-    }
 
     /**
      * Turn one wire failure into a line a person can act on.
@@ -927,18 +904,6 @@ window.__ModuleLoader__.load({
       return typeof first.code === 'string' && first.code.length > 0 ? `${fallback}（${first.code}）` : fallback;
     }
 
-    /**
-     * Format a byte count for the catalog table.
-     * @param {number} bytes - size in bytes.
-     * @returns {string} a short human size.
-     */
-    function formatBytes(bytes) {
-      if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-      if (bytes < 1024) return `${bytes} B`;
-      if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-      if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-      return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-    }
 
     return {
       inject: ['slots', 'remote', 'remote.workspaceFiles', 'locale', 'sessions'],
@@ -1012,7 +977,6 @@ window.__ModuleLoader__.load({
             '[data-file-maid="row-toggle"]{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer;text-align:left;}',
             '[data-file-maid="row-toggle"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;border-radius:4px;}',
             '[data-file-maid="detail"]{padding:4px 8px 10px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);}',
-            '[data-file-maid="star"]{color:var(--dsw-alias-brand-primary);}',
             '[data-file-maid="button"]{padding:2px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-layer-1);color:inherit;font:inherit;white-space:nowrap;cursor:pointer;}',
             '[data-file-maid="cardhead"] [data-file-maid="button"]{flex:0 0 auto;}',
             '[data-file-maid="button"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
@@ -1065,11 +1029,12 @@ window.__ModuleLoader__.load({
             '[data-file-maid="input"][data-invalid="true"]{border-color:var(--dsw-alias-border-l2,currentColor);}',
             '[data-file-maid="managehint"]{color:var(--dsw-alias-label-tertiary);font-size:var(--maid-fs-meta);}',
             '[data-file-maid="manageerror"]{color:var(--dsw-alias-label-primary);font-size:var(--maid-fs-meta);border-left:2px solid var(--dsw-alias-state-error-primary);padding-left:6px;}',
-            '[data-file-maid="defaulttag"]{flex:0 0 auto;color:var(--dsw-alias-brand-primary);font-size:var(--maid-fs-meta);line-height:1.4;min-height:14px;white-space:nowrap;}',
+            '[data-file-maid="star"]{flex:0 0 auto;color:var(--dsw-alias-brand-primary);font-size:var(--maid-fs-meta);line-height:1.4;cursor:help;}',
             '[data-file-maid="linkbutton"]{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:0 6px;border:0;background:none;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:24px;white-space:nowrap;cursor:pointer;border-radius:5px;}',
             '[data-file-maid="linkbutton"]:hover:not(:disabled){color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
             '[data-file-maid="linkbutton"]:disabled{opacity:.5;cursor:default;}',
             '[data-file-maid="linkbutton"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+            '[data-file-maid="linkbutton"][data-tone="danger"]:hover:not(:disabled){color:var(--dsw-alias-state-error-primary,#e5484d);}',
             '[data-file-maid="viewslot"][data-disabled="true"]{opacity:.55;}',
             '[data-file-maid="viewslot"][data-disabled="true"] [role="tab"],[data-file-maid="viewslot"][data-disabled="true"] button{pointer-events:none;cursor:default;}',
             /* Same geometry as the sidebar row: icon + label, one compact track. */
@@ -1165,18 +1130,16 @@ window.__ModuleLoader__.load({
             '[data-file-maid="scancell"]{display:flex;flex-direction:column;min-width:0;}',
             '[data-file-maid="scancell"]>[data-file-maid="scanval"]{flex:0 0 auto;margin-left:0;text-align:left;font-size:var(--maid-fs-num);font-weight:600;line-height:1.3;}',
             '[data-file-maid="scanlabel"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:var(--maid-fs-meta);line-height:1.4;}',
-            '[data-file-maid="scanact"]{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:0 8px;border:1px solid var(--dsw-alias-border-l1,currentColor);border-radius:6px;background:var(--dsw-alias-bg-layer-1,transparent);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:24px;color:var(--dsw-alias-brand-primary,inherit);cursor:pointer;}',
+            '[data-file-maid="scanact"]{justify-content:center;gap:4px;}',
             '[data-file-maid="scanact"]:hover{border-color:var(--dsw-alias-brand-primary,currentColor);background:var(--dsw-alias-interactive-bg-hover,transparent);}',
             '[data-file-maid="scanact"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,currentColor);outline-offset:1px;}',
             '[data-file-maid="scanact"][aria-busy="true"]{opacity:.55;cursor:progress;}',
             '[data-file-maid="morebar"]{min-height:24px;}',
-            '[data-file-maid="rowact"]{min-height:24px;}',,
             '[data-file-maid="emptystate"] [data-file-maid="scanact"]{min-height:28px;padding:0 12px;}',
             '[data-file-maid="scanstatus"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"][data-tone="warn"]{padding-left:6px;border-left:2px solid var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-label-primary);}',
             '[data-file-maid="scanaside"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
             '[data-file-maid="scannote"]{margin-top:4px;font-size:var(--maid-fs-meta);line-height:1.4;min-height:15px;color:var(--dsw-alias-label-secondary);}',
-            '[data-file-maid="scanfacts"]{margin-top:8px;padding-top:4px;border-top:1px solid var(--dsw-alias-border-l1);font-size:var(--maid-fs-meta);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanrows"]{display:flex;flex-direction:column;margin-top:0;min-width:0;}',
             '[data-file-maid="scanrow"]{display:flex;align-items:baseline;gap:var(--maid-gap-kv);min-width:0;padding:var(--maid-row-pad) 0;border-top:1px solid var(--dsw-alias-border-l1);}',
             '[data-file-maid="scanrows"]>[data-file-maid="scanrow"]:first-child{border-top:0;padding-top:0;}',
@@ -1225,6 +1188,9 @@ window.__ModuleLoader__.load({
             '[data-file-maid="setupdefaulthint"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
             '[data-file-maid="setupfield"]{display:flex;flex-direction:column;gap:4px;min-width:0;}',
             '[data-file-maid="setuplabel"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="setuprowof"]{display:flex;align-items:center;gap:6px;min-width:0;}',
+            '[data-file-maid="setuprowof"] [data-file-maid="setupinput"]{flex:1 1 auto;min-width:0;}',
+            '[data-file-maid="setuprowof"] [data-file-maid="setupsecondary"]{flex:0 0 auto;}',
             '[data-file-maid="setupinput"]{min-height:28px;padding:0 8px;border:1px solid var(--dsw-alias-label-tertiary);border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:var(--maid-fs-row);}',
             '[data-file-maid="setupinput"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="setuphint"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
@@ -1245,27 +1211,30 @@ window.__ModuleLoader__.load({
             '[data-file-maid="purposecell"]{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;}',
             '[data-file-maid="factvalue"]{flex:1 1 auto;min-width:0;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;}',
             '[data-file-maid="rowacts"]{display:flex;align-items:center;gap:6px;flex:0 0 auto;}',
-            '[data-file-maid="rowact"]{flex:0 0 auto;padding:0 7px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:24px;cursor:pointer;white-space:nowrap;}',
+            '[data-file-maid="rowact"]{position:relative;flex:0 0 auto;padding:0 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:20px;cursor:pointer;white-space:nowrap;}',
+            '[data-file-maid="rowact"]::after{content:"";position:absolute;inset:-2px 0;}',
             '[data-file-maid="rowact"]:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
             '[data-file-maid="rowact"][data-tone="danger"]:hover,[data-file-maid="rowact"][data-tone="danger"]:focus-visible{color:var(--dsw-alias-state-error-primary,#e5484d);}',
             '[data-file-maid="rowact"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="pathline"]{flex:1 1 auto;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--maid-fs-meta);line-height:1.45;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;}',
             '[data-file-maid="purposetext"]{font-size:var(--maid-fs-row);line-height:1.45;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;}',
             '[data-file-maid="purposetext"][data-clipped="true"]{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}',
-            '[data-file-maid="purposemore"]{align-self:flex-start;display:inline-flex;align-items:center;min-height:24px;padding:0 4px;border:0;background:none;color:var(--dsw-alias-brand-primary);font:inherit;font-size:var(--maid-fs-meta);line-height:1.4;cursor:pointer;border-radius:4px;}',
+            '[data-file-maid="purposemore"]{align-self:flex-start;display:inline-flex;align-items:center;min-height:24px;padding:0 4px;border:0;background:none;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-meta);line-height:1.4;cursor:pointer;border-radius:4px;}',
+            '[data-file-maid="purposemore"]:hover{color:var(--dsw-alias-label-primary);}',
             '[data-file-maid="purposemore"]:hover{background:var(--dsw-alias-interactive-bg-hover);}',
             '[data-file-maid="purposemore"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="sectionlabel"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '[data-file-maid="scanage"]{color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);white-space:nowrap;}',
-            '[data-file-maid="scanfactsroot"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);}',
             '[data-file-maid="viewglyph"]{flex:0 0 auto;opacity:.8;font-size:var(--maid-fs-body);}',
             '[data-file-maid="morebarlabel"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '[data-file-maid="morebarglyph"]{flex:0 0 auto;opacity:.7;}',
             '[data-file-maid="rowflag"]{flex:0 0 auto;padding-left:6px;border-left:2px solid var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-label-primary);}',
             '[data-file-maid="check"]{flex:0 0 auto;width:14px;height:14px;margin:0 4px 0 0;accent-color:var(--dsw-alias-brand-primary);}',
             '[data-file-maid="rowerror"]{margin:2px 0 0;color:var(--dsw-alias-state-error-primary,#e5484d);font-size:var(--maid-fs-meta);line-height:1.4;}',
-            '[data-file-maid="ghostbutton"]{display:inline-flex;align-items:center;flex:0 0 auto;padding:0 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:24px;cursor:pointer;white-space:nowrap;}',
-            '[data-file-maid="ghostbutton"]:hover{background:var(--dsw-alias-interactive-bg-hover);}',
+            // One colour language: primary actions carry the brand colour, secondary
+            // controls stay neutral and only darken on hover.
+            '[data-file-maid="ghostbutton"],[data-file-maid="button"][data-tone="primary"],[data-file-maid="scanact"]{display:inline-flex;align-items:center;flex:0 0 auto;padding:0 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:transparent;color:var(--dsw-alias-brand-primary,inherit);font:inherit;font-size:var(--maid-fs-body);line-height:1.4;min-height:24px;cursor:pointer;white-space:nowrap;}',
+            '[data-file-maid="ghostbutton"]:hover,[data-file-maid="button"][data-tone="primary"]:hover{border-color:var(--dsw-alias-brand-primary,currentColor);background:var(--dsw-alias-interactive-bg-hover);}',
             '[data-file-maid="ghostbutton"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
             '[data-file-maid="morebar"]{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:4px;padding:4px 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-layer-2,transparent);color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-meta);cursor:pointer;}',
             '[data-file-maid="morebar"]:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}',
@@ -1433,11 +1402,11 @@ window.__ModuleLoader__.load({
                     : CATALOG_STATES.includes(catalogState)
                       ? t(`state.${catalogState}`)
                       : t('state.loading');
+          // A slow scan is a performance note, and it already has its own line on the
+          // 扫描 page. The badge speaks only about whether the root can route files.
           const tone =
             catalogState === 'MANAGED'
-              ? status?.scan?.degraded === true
-                ? 'warn'
-                : 'ok'
+              ? 'ok'
               : catalogState === 'ERROR' || state.phase === 'failed'
                 ? 'error'
                 : catalogState === 'UNINITIALIZED' || state.phase === 'absent'
@@ -1461,9 +1430,7 @@ window.__ModuleLoader__.load({
                       ? t('hint.notManaged')
                       : state.phase === 'absent'
                         ? t('hint.absent')
-                        : degraded
-                          ? t('hint.degraded')
-                          : '';
+                        : '';
           /** The card header owns the age and the refresh action, so the panel publishes both. */
           const ageText = typeof status?.generatedAt === 'string' ? formatAge(status.generatedAt, t, now) : '';
           /**
@@ -1572,7 +1539,6 @@ window.__ModuleLoader__.load({
           if (typeof status?.scan?.scannedAt === 'string') {
             metaParts.push({ text: `${t('label.scan')} ${formatAge(status.scan.scannedAt, t, now)} · ${status.scan.durationMs ?? 0} ms` });
           }
-          if (status?.scan !== undefined) metaParts.push({ text: status.scan.watched === true ? t('label.watch') : t('label.watchOff') });
           if (status?.scan?.baseline === true) metaParts.push({ text: t('label.baseline') });
           if (typeof catalog?.hash === 'string') {
             metaParts.push({ mono: true, text: catalog.hash.slice('sha256:'.length, 'sha256:'.length + 8) });
@@ -1726,7 +1692,6 @@ window.__ModuleLoader__.load({
               null,
               h('th', { 'data-file-maid': 'th', scope: 'col' }, t('col.dir')),
               h('th', { 'data-file-maid': 'th', scope: 'col', 'data-align': 'num' }, t('col.files')),
-              h('th', { 'data-file-maid': 'th', scope: 'col', 'data-align': 'num' }, t('col.size')),
               h('th', { 'data-file-maid': 'th', scope: 'col' }, t('col.about')),
             ),
           );
@@ -1756,11 +1721,12 @@ window.__ModuleLoader__.load({
                     },
                     h('span', { 'aria-hidden': 'true' }, isOpen ? '▾' : '▸'),
                     h('span', { 'data-file-maid': 'cell', title: dir.path }, dir.path),
-                    dir.path === catalog?.rootDefault ? h('span', { 'data-file-maid': 'star', 'aria-hidden': 'true' }, '★') : null,
+                    dir.path === catalog?.rootDefault
+                      ? h(StateTip, { tip: t('detail.default') }, h('span', { 'data-file-maid': 'star', 'aria-hidden': 'true' }, '★'))
+                      : null,
                   ),
                 ),
                 h('td', { 'data-file-maid': 'td', 'data-align': 'num' }, fileCount(dir.files)),
-                h('td', { 'data-file-maid': 'td', 'data-align': 'num', title: `${dir.bytes ?? 0} B` }, formatBytes(dir.bytes)),
                 h(
                   'td',
                   { 'data-file-maid': 'td', 'data-field': 'about' },
@@ -1775,7 +1741,7 @@ window.__ModuleLoader__.load({
                   { key: `detail-${dir.path}`, 'data-file-maid': 'tr', id: `file-maid-detail-${dirSlug(dir.path)}` },
                   h(
                     'td',
-                    { 'data-file-maid': 'detail', colSpan: 4 },
+                    { 'data-file-maid': 'detail', colSpan: 3 },
                     h(
                       'div',
                       null,
@@ -1787,12 +1753,12 @@ window.__ModuleLoader__.load({
                       { 'data-file-maid': 'manageactions' },
                       h(
                         'button',
-                        { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => openManage('edit', dir) },
+                        { type: 'button', 'data-file-maid': 'rowact', onClick: () => openManage('edit', dir) },
                         t('manage.edit'),
                       ),
                       h(
                         'button',
-                        { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => openManage('remove', dir) },
+                        { type: 'button', 'data-file-maid': 'rowact', 'data-tone': 'danger', onClick: () => openManage('remove', dir) },
                         t('manage.delete'),
                       ),
                     ),
@@ -1837,7 +1803,11 @@ window.__ModuleLoader__.load({
                   h('span', { 'aria-hidden': 'true' }, isOpen ? '▾' : '▸'),
                   h('span', { 'data-file-maid': 'rowpath' }, dir.path),
                   dir.path === catalog?.rootDefault
-                    ? h('span', { 'data-file-maid': 'defaulttag', 'aria-hidden': 'true' }, '★')
+                    ? h(
+                        StateTip,
+                        { tip: t('detail.default') },
+                        h('span', { 'data-file-maid': 'star', 'aria-hidden': 'true' }, '★'),
+                      )
                     : null,
                 ),
                 isOpen
@@ -1961,6 +1931,16 @@ window.__ModuleLoader__.load({
            * @param {number} index - position in the rendered list.
            * @returns {object} the list item.
            */
+          /** Why this file landed where it did, in the reader's words. */
+          const decidedText = (by) =>
+            by === 'rule'
+              ? t('detail.byRule')
+              : by === 'agent'
+                ? t('detail.byAgent')
+                : by === 'default'
+                  ? t('detail.byDefault')
+                  : '—';
+
           const misplacedRow = (item, index) => {
             const path = typeof item.path === 'string' ? item.path : '';
             const cut = path.lastIndexOf('/');
@@ -2021,6 +2001,12 @@ window.__ModuleLoader__.load({
                           h('span', { 'data-file-maid': 'itemfactlabel' }, t('misplaced.timeLabel')),
                           h('span', { 'data-file-maid': 'itemstamp' }, stamp),
                         ),
+                    h(
+                      'div',
+                      { 'data-file-maid': 'itemfact' },
+                      h('span', { 'data-file-maid': 'itemfactlabel' }, t('misplaced.byLabel')),
+                      h('span', { 'data-file-maid': 'itemstamp' }, decidedText(item.decided_by)),
+                    ),
                   )
                 : null,
             );
@@ -2113,7 +2099,7 @@ window.__ModuleLoader__.load({
             h(
               'span',
               { 'data-file-maid': 'scanage' },
-              `${scannedAt === '' ? '—' : `${formatClock(scannedAt, now)} · ${formatAge(scannedAt, t, now)}`}${scan?.watched === true ? '' : ` · ${t('label.watchOff')}`}`,
+              `${scannedAt === '' ? '—' : `${formatClock(scannedAt, now)} · ${formatAge(scannedAt, t, now)}`}`,
             ),
             h(
               'span',
@@ -2125,6 +2111,11 @@ window.__ModuleLoader__.load({
           /** A grey line under the figures: explains a gap the numbers alone cannot. */
           const scanNote = (key, text) => h('div', { key, 'data-file-maid': 'scannote' }, text);
 
+          /** Prefer the file count; fall back to the record count on older snapshots. */
+          const num = (files, records) => {
+            const value = Number.isFinite(files) ? files : records;
+            return Number.isFinite(value) ? String(value) : '—';
+          };
           const baselineOnly = reconcile === undefined || reconcile === null || reconcile.baseline === true;
           const reconcileAside = baselineOnly
             ? null
@@ -2162,9 +2153,9 @@ window.__ModuleLoader__.load({
                 h(
                   'div',
                   { 'data-file-maid': 'scanstat' },
-                  scanStat('newFiles', Number.isFinite(reconcile.new_files) ? String(reconcile.new_files) : '—', t('k.newFiles')),
-                  scanStat('recorded', Number.isFinite(reconcile.recorded) ? String(reconcile.recorded) : '—', t('k.recorded')),
-                  scanStat('ledger', Number.isFinite(reconcile.ledger) ? String(reconcile.ledger) : '—', t('k.ledger')),
+                  scanStat('newFiles', num(reconcile.new_files), t('k.newFiles')),
+                  scanStat('recorded', num(reconcile.recorded_files, reconcile.recorded), t('k.recorded')),
+                  scanStat('ledger', num(reconcile.ledger_files, reconcile.ledger), t('k.ledger')),
                 ),
                 coverageLost
                   ? scanNote('ledgernote', decisionsGap ? t('scan.recordedNote') : t('scan.ledgerNote'))
@@ -2207,11 +2198,6 @@ window.__ModuleLoader__.load({
               scanAction,
             ),
             scanGroup('reconcile', t('section.reconcile'), reconcileBody, reconcileAside),
-            h(
-              'div',
-              { 'data-file-maid': 'scanfacts' },
-              h('span', { 'data-file-maid': 'scanfactsroot' }, `${t('scan.factRoot')} ${shortRootPath(root)}`),
-            ),
           );
           const scanBody = scan === undefined
             ? emptyState(
@@ -2426,17 +2412,29 @@ window.__ModuleLoader__.load({
            * Ask the Host to open the system folder dialog and take its answer.
            * @returns {Promise<void>} fulfillment after the dialog closed.
            */
+          /**
+           * Ask the Host to open the system folder dialog.
+           * @returns {Promise<{ path: string } | { error: string } | undefined>} the chosen
+           * folder relative to the root, an error sentence, or nothing when cancelled.
+           */
+          const askFolder = async () => {
+            const result = await callRemote('pick', root, readerId);
+            if (result?.ok !== true) return { error: describeError(result, t('manage.failed')) };
+            if (result.value?.cancelled === true || typeof result.value?.path !== 'string') return undefined;
+            return { path: result.value.path };
+          };
+
           const pickDirectory = async () => {
             setManageBusy(true);
             setManageError('');
-            const result = await callRemote('pick', root, readerId);
+            const chosen = await askFolder();
             setManageBusy(false);
-            if (result?.ok !== true) {
-              setManageError(describeError(result, t('manage.failed')));
+            if (chosen?.error !== undefined) {
+              setManageError(chosen.error);
               return;
             }
-            if (result.value?.cancelled === true || typeof result.value?.path !== 'string') return;
-            setManage((current) => (current === undefined ? current : { ...current, path: result.value.path }));
+            if (chosen === undefined) return;
+            setManage((current) => (current === undefined ? current : { ...current, path: chosen.path }));
           };
 
           /**
@@ -2445,12 +2443,18 @@ window.__ModuleLoader__.load({
            * Host's rule, so the button never invites a name that cannot be saved.
            */
           const managePath = manage === undefined ? '' : manage.path.trim();
-          const managePathLegal =
-            managePath.length > 0 &&
-            !managePath.startsWith('.') &&
-            !managePath.includes('/') &&
-            !managePath.includes('\\') &&
-            managePath !== '..';
+          // Same rule the host applies (up to three segments, no dot segments, no
+          // absolute path): the two forms used to read one rule two ways.
+          const managePathLegal = (() => {
+            const raw = managePath.trim();
+            if (raw === '' || raw.startsWith('/') || raw.includes('\\')) return false;
+            const parts = raw.split('/').filter((part) => part !== '');
+            return (
+              parts.length > 0 &&
+              parts.length <= 3 &&
+              parts.every((part) => part !== '' && part !== '.' && part !== '..' && !part.startsWith('.'))
+            );
+          })();
           const manageReady =
             manage !== undefined &&
             manage.mode !== 'remove' &&
@@ -2523,6 +2527,7 @@ window.__ModuleLoader__.load({
                     'data-file-maid': 'input',
                     id: 'file-maid-manage-purpose',
                     required: true,
+                    maxLength: 200,
                     'data-invalid': manage.purpose.trim().length === 0 ? 'true' : 'false',
                     value: manage.purpose,
                     placeholder: t('manage.purposeHint'),
@@ -2536,6 +2541,7 @@ window.__ModuleLoader__.load({
                   h('input', {
                     'data-file-maid': 'input',
                     id: 'file-maid-manage-excludes',
+                    maxLength: 200,
                     value: manage.excludes,
                     placeholder: t('manage.termsHint'),
                     onChange: (event) => setManage({ ...manage, excludes: event.target.value }),
@@ -2572,7 +2578,7 @@ window.__ModuleLoader__.load({
                   { 'data-file-maid': 'manageactions' },
                   h(
                     'button',
-                    { type: 'button', 'data-file-maid': 'button', disabled: manageBusy || !manageReady, onClick: () => submitManage(manage.mode) },
+                    { type: 'button', 'data-file-maid': 'button', 'data-tone': 'primary', disabled: manageBusy || !manageReady, onClick: () => submitManage(manage.mode) },
                     manage.mode === 'add' ? t('manage.create') : t('manage.save'),
                   ),
                   h(
@@ -2641,6 +2647,7 @@ window.__ModuleLoader__.load({
             draft: { path: '', purpose: '', excludes: '' },
             problem: null,
             checking: false,
+            picking: false,
             error: null,
             scan: null,
           };
@@ -2672,6 +2679,23 @@ window.__ModuleLoader__.load({
               return;
             }
             setupPatch({ checking: false, problem: result.value?.path?.problem ?? null });
+          };
+          const pickSetupPath = async () => {
+            setupPatch({ picking: true, error: null });
+            const chosen = await askFolder();
+            if (chosen?.error !== undefined) {
+              setupPatch({ picking: false, problem: chosen.error });
+              return;
+            }
+            if (chosen === undefined) {
+              setupPatch({ picking: false });
+              return;
+            }
+            setupPatch({ picking: false, draft: { ...setupForm, path: chosen.path }, problem: null });
+            // The draft check is what catches a folder that is missing or too deep.
+            const result = await callRemote('draft', root, readerId, chosen.path);
+            if (result?.ok === true) setupPatch({ problem: result.value?.path?.problem ?? null });
+            else setupPatch({ problem: describeError(result, t('setup.checkFailed')) });
           };
           const addSetupRow = () => {
             if (!setupFormReady) return;
@@ -2836,6 +2860,7 @@ window.__ModuleLoader__.load({
                     'data-file-maid': 'setupinput',
                     'aria-required': needed === true ? 'true' : 'false',
                     placeholder,
+                    maxLength: key === 'path' ? undefined : 200,
                     value: setupForm[key],
                     onChange: (event) => setupPatch({ draft: { ...setupForm, [key]: event.target.value } }),
                     onBlur: key === 'path' ? () => void checkSetupPath() : undefined,
@@ -2845,11 +2870,47 @@ window.__ModuleLoader__.load({
                 'div',
                 { 'data-file-maid': 'setuplayer' },
                 h('div', { 'data-file-maid': 'setuphead' }, back('list'), h('span', { 'data-file-maid': 'setuptitle' }, t('setup.addTitle'))),
-                field('path', t('setup.path'), t('setup.pathPh'), true),
+                h(
+                  'div',
+                  { 'data-file-maid': 'setupfield' },
+                  h(
+                    'label',
+                    { 'data-file-maid': 'setuplabel', htmlFor: 'file-maid-setup-path' },
+                    t('setup.path'),
+                    h('span', { 'data-file-maid': 'required' }, ' *'),
+                  ),
+                  h(
+                    'span',
+                    { 'data-file-maid': 'setuprowof' },
+                    h('input', {
+                      type: 'text',
+                      id: 'file-maid-setup-path',
+                      'data-file-maid': 'setupinput',
+                      'aria-required': 'true',
+                      placeholder: t('setup.pathPh'),
+                      value: setupForm.path,
+                      onChange: (event) => setupPatch({ draft: { ...setupForm, path: event.target.value } }),
+                      onBlur: () => void checkSetupPath(),
+                    }),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        'data-file-maid': 'setupsecondary',
+                        disabled: setup?.picking === true,
+                        onClick: () => void pickSetupPath(),
+                      },
+                      t('manage.pick'),
+                    ),
+                  ),
+                ),
                 setup.problem === null
                   ? h('div', { 'data-file-maid': 'setuphint' }, t('setup.pathHint'))
                   : h('div', { 'data-file-maid': 'setupproblem', role: 'status' }, setup.problem),
                 setupDuplicate ? h('div', { 'data-file-maid': 'setupproblem' }, t('setup.dup')) : null,
+                (setup?.dirs ?? []).length >= 35
+                  ? h('div', { 'data-file-maid': 'setuphint' }, fill(t('setup.tooMany'), { n: (setup?.dirs ?? []).length }))
+                  : null,
                 field('purpose', t('setup.purpose'), t('setup.purposePh'), true),
                 field('excludes', t('setup.excludes'), t('setup.excludesPh'), false),
                 actions(
@@ -2985,7 +3046,6 @@ window.__ModuleLoader__.load({
             // click that cannot work.
             setup === undefined ? viewslot : null,
             bodyBlock,
-            compact ? null : h('div', { 'data-file-maid': 'muted', style: { marginTop: 'auto', paddingTop: '8px' } }, t('readonly')),
           );
         }
 

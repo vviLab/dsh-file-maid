@@ -53,6 +53,8 @@ export function reconcile(input) {
       ledger,
       missing: [],
       residual: 0,
+      recorded_files: 0,
+      ledger_files: 0,
       gap: 0,
       gap_ratio: 0,
       top_dirs: [],
@@ -89,6 +91,8 @@ export function reconcile(input) {
       new_files: newFiles,
       recorded,
       ledger,
+      recorded_files: null,
+      ledger_files: null,
       missing: [],
       residual: null,
       gap,
@@ -121,6 +125,10 @@ export function reconcile(input) {
     new_files: newFiles,
     recorded,
     ledger,
+    // The card adds these three numbers together, so they have to be the same
+    // unit: files. A file written twice is one file, not two records.
+    recorded_files: recordedPaths.size,
+    ledger_files: ledgerPaths.size,
     missing,
     residual,
     gap,
