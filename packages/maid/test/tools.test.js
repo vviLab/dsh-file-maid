@@ -565,3 +565,30 @@ test('EX-04 pruning drops a pair when the budget turns over', async (t) => {
     assert.ok(hasMd || hasJson);
   }
 });
+
+test('EX-05 the CLI writes the same pair as the tool', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const cli = join(import.meta.dirname, '..', 'scripts', 'cli.js');
+  const { stdout } = await promisify(execFile)(process.execPath, [cli, 'scan', '--root', root, '--export', 'json']);
+  const printed = JSON.parse(stdout);
+  assert.ok(printed.report.endsWith('.md'));
+  assert.ok(printed.export.endsWith('.json'));
+  assert.equal(printed.export.replace(/\.json$/u, ''), printed.report.replace(/\.md$/u, ''), 'one stem, two files');
+  const files = await readdir(join(root, '.maid', 'reports'));
+  assert.ok(files.includes(printed.report.split('/').pop()));
+  assert.ok(files.includes(printed.export.split('/').pop()));
+});

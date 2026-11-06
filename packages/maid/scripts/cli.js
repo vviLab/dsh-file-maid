@@ -8,7 +8,7 @@
  *
  * Usage:
  *   node scripts/cli.js route --root <dir> --name <file> [--intent <text>]
- *   node scripts/cli.js scan  --root <dir> [--scope managed|root]
+ *   node scripts/cli.js scan  --root <dir> [--scope managed|root] [--export json]
  *   node scripts/cli.js review --root <dir>
  *   node scripts/cli.js init  --root <dir> [--mode init|opt_out|defer] [--root-default <dir>]
  *   node scripts/cli.js check
@@ -25,7 +25,7 @@ import { snapshotFromIndex } from '../src/runtime/scan.js';
 import { reconcile } from '../src/core/reconcile.js';
 import * as store from '../src/state/store.js';
 import * as probe from '../src/state/probe.js';
-import { renderReport, reportName } from '../src/surfaces/tools.js';
+import { exportDocument, renderReport, reportName } from '../src/surfaces/tools.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -136,7 +136,13 @@ async function runScan(flags) {
   }
   const name = reportName(Date.now());
   await store.writeReport(root, name, renderReport({ root, scope, outcome: { ...outcome, files, dirs }, catalog: loaded.catalog }));
-  print({ ok: true, state: loaded.state, scope, files, dirs, report: `.maid/reports/${name}` });
+  let exported = null;
+  if (flags.export === 'json') {
+    const jsonName = name.replace(/\.md$/u, '.json');
+    await store.writeScanExport(root, jsonName, exportDocument({ root, outcome: { ...outcome, files, dirs } }));
+    exported = `.maid/reports/${jsonName}`;
+  }
+  print({ ok: true, state: loaded.state, scope, files, dirs, report: `.maid/reports/${name}`, export: exported });
 }
 
 /**
