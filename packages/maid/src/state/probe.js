@@ -9,7 +9,7 @@
  * @module file-maid/state/probe
  */
 import { randomBytes } from 'node:crypto';
-import { statSync, lstatSync, realpathSync } from 'node:fs';
+import { readFileSync, statSync, lstatSync, realpathSync } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { MAID_SEGMENT, hasMaidSegment } from '../core/path.js';
@@ -19,6 +19,71 @@ export const SCAN_IGNORED = Object.freeze(['.git', 'node_modules', '.tmp', MAID_
 
 /** File-count ceiling before a `root`-scoped scan refuses to run (`§8.5`). */
 export const SCAN_FILE_BUDGET = 5000;
+
+/** Hard cap on concurrent directory reads; 32 measured no gain over 8. */
+export const SCAN_CONCURRENCY_MAX = 8;
+/** Floor of the adaptive cap: 1 is the serial behaviour. */
+export const SCAN_CONCURRENCY_MIN = 1;
+/** Cap used before any latency sample exists. */
+export const SCAN_CONCURRENCY_START = 4;
+/** Mean `readdir` latency (ms) at or below which the cap may grow. */
+export const SCAN_LATENCY_FAST_MS = 0.2;
+/** Mean `readdir` latency (ms) above which the cap may shrink. */
+export const SCAN_LATENCY_SLOW_MS = 1.5;
+/** Reads per latency window. */
+export const SCAN_LATENCY_WINDOW = 32;
+/** Mount types whose request queues do not benefit from local concurrency. */
+const NETWORK_FS = Object.freeze(['smb', 'smbfs', 'cifs', 'nfs', 'nfs4', 'fuse.sshfs', 'afpfs', 'webdav']);
+
+/**
+ * Read the pinned cap from the environment.
+ *
+ * The escape hatch lets an operator force serial I/O without shipping a release
+ * when a scan competes with something else on the same disk.
+ * @param {Record<string, string | undefined>} [env] - environment to read.
+ * @returns {number | undefined} the pinned cap, or undefined for adaptive.
+ */
+export function scanConcurrency(env = process.env) {
+  const raw = env?.FILE_MAID_SCAN_CONCURRENCY;
+  if (raw === undefined || raw === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < SCAN_CONCURRENCY_MIN || parsed > SCAN_CONCURRENCY_MAX) return undefined;
+  return parsed;
+}
+
+/**
+ * Pick the starting cap for one directory.
+ *
+ * Linux exposes the mount type in `/proc/mounts`, so a network mount starts at 2
+ * instead of paying for the first slow window. macOS has no equivalent without a
+ * subprocess, so it starts at the default and adapts from measurements.
+ * @param {string} directory - absolute directory about to be walked.
+ * @returns {number} the starting cap.
+ */
+export function initialLimit(directory) {
+  if (process.platform !== 'linux') return SCAN_CONCURRENCY_START;
+  try {
+    const lines = readFileSync('/proc/mounts', 'utf8').split('\n');
+    let bestPoint = '';
+    let bestType = '';
+    for (const line of lines) {
+      const fields = line.split(' ');
+      const point = fields[1];
+      const type = fields[2];
+      if (point === undefined || type === undefined) continue;
+      const decoded = point.replace(/\\040/g, ' ').replace(/\\011/g, '\t');
+      const prefix = decoded.endsWith('/') ? decoded : `${decoded}/`;
+      if (directory !== decoded && !directory.startsWith(prefix)) continue;
+      if (decoded.length > bestPoint.length) {
+        bestPoint = decoded;
+        bestType = type;
+      }
+    }
+    return NETWORK_FS.includes(bestType) ? 2 : SCAN_CONCURRENCY_START;
+  } catch {
+    return SCAN_CONCURRENCY_START;
+  }
+}
 
 /**
  * Build one stable identity string for a snapshot entry.
@@ -258,61 +323,153 @@ export async function ensureDirectory(directory, mode) {
 /**
  * Recursively scan one directory tree for the snapshot (`§11.2`).
  *
- * Symbolic links are recorded but never descended into, which keeps one scan
- * bounded and stops a link from pulling the walk outside the controlled root.
+ * The walk is concurrent because `readdir` dominates a scan: on the reference
+ * workspace 649 directory reads take 20-24 ms while 4,162 `lstat` calls take
+ * about 10 ms. The cap adapts to the measured `readdir` latency, so a network
+ * mount degrades toward serial instead of oversubscribing its request queue.
+ * Symbolic links are recorded but never descended into: `readdir` reports them
+ * as non-directories, so the walk stays inside the controlled root.
  * @param {string} directory - absolute directory to scan.
- * @param {{ ignore?: readonly string[], maxFiles?: number, signal?: AbortSignal }} [options] - scan controls.
+ * @param {{ ignore?: readonly string[], maxFiles?: number, signal?: AbortSignal, concurrency?: number, now?: () => number, readdir?: Function }} [options] - scan controls; `concurrency` pins the cap and disables the adaptive step.
  * @returns {Promise<{ entries: Record<string, object>, files: number, dirs: number, truncated: boolean }>} snapshot section.
  */
 export async function scanTree(directory, options = {}) {
   const ignore = new Set(options.ignore ?? SCAN_IGNORED);
   const maxFiles = options.maxFiles ?? Number.POSITIVE_INFINITY;
+  const readdir = options.readdir ?? fsp.readdir;
+  const now = options.now ?? Date.now;
+  const pinned = Number.isInteger(options.concurrency) && options.concurrency >= 1
+    ? Math.min(options.concurrency, SCAN_CONCURRENCY_MAX)
+    : scanConcurrency();
+
   const entries = {};
   let files = 0;
   let dirs = 0;
   let truncated = false;
-  const stack = [''];
 
-  while (stack.length > 0) {
-    if (options.signal?.aborted) break;
-    const relativeDir = stack.pop();
-    const absoluteDir = relativeDir === '' ? directory : join(directory, ...relativeDir.split('/'));
-    let children;
-    try {
-      children = await fsp.readdir(absoluteDir, { withFileTypes: true });
-    } catch (error) {
-      if (error?.code === 'ENOENT' || error?.code === 'EACCES' || error?.code === 'ENOTDIR') continue;
-      throw error;
+  /** Directories still to read, relative to `directory`; '' is the root itself. */
+  const queue = [''];
+  /** Directory reads currently awaiting the filesystem. */
+  let active = 0;
+  /** Workers parked because the queue is empty or the cap is reached. */
+  const waiters = new Set();
+  let limit = pinned ?? initialLimit(directory);
+  let slowBatches = 0;
+  let samples = [];
+  let firstError;
+
+  const wake = () => {
+    if (waiters.size === 0) return;
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  };
+  const park = () => new Promise((resolve) => waiters.add(resolve));
+
+  /**
+   * Adjust the cap from the mean latency of the last window.
+   * One slow window is not enough evidence: a cold page cache or a backup job
+   * makes a single window slow, and dropping to serial on that would be sticky.
+   * @param {number} elapsed - milliseconds spent in one `readdir`.
+   */
+  const recordLatency = (elapsed) => {
+    if (pinned !== undefined) return;
+    samples.push(elapsed);
+    if (samples.length < SCAN_LATENCY_WINDOW) return;
+    const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+    samples = [];
+    if (mean > SCAN_LATENCY_SLOW_MS) {
+      slowBatches += 1;
+      if (slowBatches >= 2 && limit > SCAN_CONCURRENCY_MIN) {
+        limit = Math.max(SCAN_CONCURRENCY_MIN, Math.floor(limit / 2));
+        wake();
+      }
+      return;
     }
-    children.sort((left, right) => left.name.localeCompare(right.name));
-    for (const child of children) {
-      if (ignore.has(child.name)) continue;
-      if (child.name === '.DS_Store' || child.name === '._.DS_Store') continue;
-      const relative = relativeDir === '' ? child.name : `${relativeDir}/${child.name}`;
-      const absolute = join(absoluteDir, child.name);
-      if (child.isDirectory()) {
-        dirs += 1;
-        stack.push(relative);
+    slowBatches = 0;
+    if (mean <= SCAN_LATENCY_FAST_MS && limit < SCAN_CONCURRENCY_MAX) {
+      limit = Math.min(SCAN_CONCURRENCY_MAX, limit + 2);
+      wake();
+    }
+  };
+
+  const take = async () => {
+    for (;;) {
+      if (options.signal?.aborted || firstError !== undefined) return undefined;
+      if (queue.length === 0) {
+        if (active === 0) return undefined;
+        await park();
         continue;
       }
-      const identity = identityOf(absolute);
-      if (identity === undefined) continue;
-      files += 1;
-      if (files > maxFiles) {
-        truncated = true;
-        stack.length = 0;
-        break;
+      if (active >= limit) {
+        await park();
+        continue;
       }
-      entries[relative] = {
-        size: identity.size,
-        mtime: Math.round(identity.mtime),
-        ctime: Math.round(identity.ctime),
-        version: versionKey({ dev: identity.dev, ino: identity.ino, size: identity.size, mtime: Math.round(identity.mtime) }),
-      };
+      const relative = queue.pop();
+      active += 1;
+      return relative;
     }
-  }
+  };
 
-  return { entries, files, dirs, truncated };
+  const worker = async () => {
+    for (let relative = await take(); relative !== undefined; relative = await take()) {
+      const absoluteDir = relative === '' ? directory : join(directory, ...relative.split('/'));
+      const startedAt = now();
+      let children;
+      try {
+        children = await readdir(absoluteDir, { withFileTypes: true });
+      } catch (error) {
+        active -= 1;
+        wake();
+        if (error?.code === 'ENOENT' || error?.code === 'EACCES' || error?.code === 'ENOTDIR') continue;
+        firstError = error;
+        queue.length = 0;
+        wake();
+        return;
+      }
+      recordLatency(now() - startedAt);
+      children.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
+      for (const child of children) {
+        if (ignore.has(child.name)) continue;
+        if (child.name === '.DS_Store' || child.name === '._.DS_Store') continue;
+        const relativeChild = relative === '' ? child.name : `${relative}/${child.name}`;
+        if (child.isDirectory()) {
+          dirs += 1;
+          queue.push(relativeChild);
+          continue;
+        }
+        const identity = identityOf(join(absoluteDir, child.name));
+        if (identity === undefined) continue;
+        files += 1;
+        if (files > maxFiles) {
+          truncated = true;
+          queue.length = 0;
+          break;
+        }
+        entries[relativeChild] = {
+          size: identity.size,
+          mtime: Math.round(identity.mtime),
+          ctime: Math.round(identity.ctime),
+          version: versionKey({ dev: identity.dev, ino: identity.ino, size: identity.size, mtime: Math.round(identity.mtime) }),
+        };
+      }
+      // Children are queued before the slot is released: releasing first leaves an
+      // instant where the queue is empty and no read is in flight, so the other
+      // workers conclude the walk is over and the pool collapses to serial.
+      active -= 1;
+      wake();
+    }
+  };
+
+  await Promise.all(Array.from({ length: SCAN_CONCURRENCY_MAX }, worker));
+  if (firstError !== undefined) throw firstError;
+
+  // A concurrent walk fills `entries` in whatever order the workers finish; the
+  // snapshot has to be reproducible, so rebuild it in code-point order.
+  const sorted = {};
+  for (const key of Object.keys(entries).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))) {
+    sorted[key] = entries[key];
+  }
+  return { entries: sorted, files, dirs, truncated };
 }
 
 /**

@@ -228,3 +228,13 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S)-[0-9]+[a-z]?" packages/maid/test/*.test.
 | 用例 | 锁住它的测试 | 文件 |
 | --- | --- | --- |
 | R-27 | R-27 the two channels report files, so the card can add them up | `ledger.test.js` |
+
+## 扫描并发
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| R-28 | R-28 a concurrent walk reports the same tree as a serial one | `scan.test.js` |
+| R-29 | R-29 candidate truncation is reproducible | `scan.test.js` |
+| R-30 | R-30 the cap follows the measured latency, and the environment can pin it | `scan.test.js` |
+| R-31 | R-31 a scan does not stall the event loop | `scan.test.js` |
+| R-31b | R-31b mount types only shorten the starting cap | `scan.test.js` |

@@ -8,7 +8,7 @@
  * needs to see.
  * @module file-maid/runtime/scan
  */
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import * as probe from '../state/probe.js';
 
 /** Elapsed time after which one managed scan is reported as degraded. */
@@ -44,29 +44,44 @@ export async function scanManaged(input) {
     (left, right) => depth(left.path) - depth(right.path) || left.path.localeCompare(right.path),
   );
 
+  // Overlap only exists when one declared directory sits inside another. Without
+  // that, the union is the plain sum and the dedupe set (plus the absolute path
+  // it needs for every file) can be skipped entirely.
+  const declared = ordered.map((entry) => entry.path);
+  const nested = declared.some((outer) => declared.some((inner) => inner !== outer && inner.startsWith(`${outer}/`)));
+
   for (const dir of ordered) {
     if (input.signal?.aborted) break;
     const section = await probe.scanTree(join(input.root, dir.path), { signal: input.signal });
     let own = 0;
     let ownBytes = 0;
+    // One prefix per declared directory: rebuilding the absolute path with `join`
+    // for every file allocated tens of thousands of strings on the reference tree.
+    const prefix = nested ? join(input.root, dir.path) + sep : '';
     for (const [relative, meta] of Object.entries(section.entries)) {
-      const absolute = join(input.root, dir.path, ...relative.split('/'));
-      if (seen.has(absolute)) continue;
-      seen.add(absolute);
+      if (nested) {
+        const absolute = relative.includes('/') ? prefix + relative.split('/').join(sep) : prefix + relative;
+        if (seen.has(absolute)) continue;
+        seen.add(absolute);
+      }
       own += 1;
       files += 1;
       ownBytes += Number.isFinite(meta?.size) ? meta.size : 0;
       if (since !== undefined && Number.isFinite(meta?.ctime) && meta.ctime >= since) {
-        if (candidates.length < CANDIDATE_LIMIT) {
-          candidates.push({ path: `${dir.path}/${relative}`, dir: dir.path, ctime: meta.ctime });
-        } else {
-          candidatesTruncated = true;
-        }
+        // Collected in full and cut after sorting: the walk is concurrent, so the
+        // arrival order is not reproducible, and the truncation point has to be.
+        candidates.push({ path: `${dir.path}/${relative}`, dir: dir.path, ctime: meta.ctime });
       }
     }
     bytes += ownBytes;
     sections[dir.path] = { files: own, bytes: ownBytes };
     dirs += section.dirs;
+  }
+
+  candidates.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  if (candidates.length > CANDIDATE_LIMIT) {
+    candidates.length = CANDIDATE_LIMIT;
+    candidatesTruncated = true;
   }
 
   const elapsed = now() - startedAt;
