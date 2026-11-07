@@ -226,7 +226,7 @@ test('R-41 a rotation names what came after it and counts the rest', () => {
   const rotatedAt = 1000;
   const candidates = [
     { path: '80-Outputs/before.md', dir: '80-Outputs', ctime: 900 },
-    { path: '80-Outputs/after.md', dir: '80-Outputs', ctime: 1100 },
+    { path: '80-Outputs/after.md', dir: '80-Outputs', ctime: 1101 },
   ];
   const split = reconcile({
     before,
@@ -254,4 +254,21 @@ test('R-42 without a rotation instant the whole window stays a count', () => {
   });
   assert.deepEqual(result.missing, []);
   assert.equal(result.unknown_files, null);
+});
+
+test('R-43 a file written in the rotation millisecond stays a count', () => {
+  const result = reconcile({
+    before: { dirs: { '80-Outputs': 0 }, files: 0 },
+    after: { dirs: { '80-Outputs': 2 }, files: 2 },
+    recorded: 0,
+    candidates: [
+      { path: '80-Outputs/tie.md', dir: '80-Outputs', ctime: 1000 },
+      { path: '80-Outputs/later.md', dir: '80-Outputs', ctime: 1001 },
+    ],
+    decisionsIncomplete: true,
+    decisionsRotatedAt: 1000,
+  });
+  // Same millisecond is ambiguous: the record could sit on either side of the cut.
+  assert.deepEqual(result.missing.map((item) => item.path), ['80-Outputs/later.md']);
+  assert.equal(result.unknown_files, 1);
 });

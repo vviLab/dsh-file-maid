@@ -274,3 +274,4 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | R-41 | R-41 a rotation names what came after it and counts the rest | `ack.test.js` |
 | R-42 | R-42 without a rotation instant the whole window stays a count | `ack.test.js` |
 | UI-80 | UI-80 the card says how many files it could not name | `ui.test.js` |
+| R-43 | R-43 a file written in the rotation millisecond stays a count | `ack.test.js` |

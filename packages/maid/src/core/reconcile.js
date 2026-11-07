@@ -95,7 +95,9 @@ export function reconcile(input) {
     let unknown = 0;
     for (const candidate of input.candidates ?? []) {
       const ctime = Number.isFinite(candidate?.ctime) ? Number(candidate.ctime) : 0;
-      if (ctime >= rotatedAt) evaluable.push(candidate);
+      // Strictly after: a file written in the same millisecond as the rotation may
+      // have landed in the rotated file, and guessing there is how a list lies.
+      if (ctime > rotatedAt) evaluable.push(candidate);
       else unknown += 1;
     }
     const inner = reconcile({ ...input, decisionsIncomplete: false, decisionsRotatedAt: undefined, candidates: evaluable });
