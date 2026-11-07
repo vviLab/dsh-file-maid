@@ -264,3 +264,6 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | EX-05 | EX-05 the CLI writes the same pair as the tool | `tools.test.js` |
 | R-37 | R-37 an acceptance after a restart still updates the stored projection | `ack.test.js` |
 | R-38 | R-38 an undo brings the row back in the stored projection | `ack.test.js` |
+| EX-06 | EX-06 a CLI scan only moves the baseline when asked | `tools.test.js` |
+| UI-77 | UI-77 a rescan asks for a second click while unrecorded changes are open | `ui.test.js` |
+| UI-78 | UI-78 the card explains when the net change and the leak count disagree | `ui.test.js` |

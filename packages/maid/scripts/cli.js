@@ -8,7 +8,7 @@
  *
  * Usage:
  *   node scripts/cli.js route --root <dir> --name <file> [--intent <text>]
- *   node scripts/cli.js scan  --root <dir> [--scope managed|root] [--export json]
+ *   node scripts/cli.js scan  --root <dir> [--scope managed|root] [--export json] [--commit]
  *   node scripts/cli.js review --root <dir>
  *   node scripts/cli.js init  --root <dir> [--mode init|opt_out|defer] [--root-default <dir>]
  *   node scripts/cli.js check
@@ -109,6 +109,7 @@ async function runScan(flags) {
   const scope = flags.scope === 'root' ? 'root' : 'managed';
   let files = 0;
   let dirs = 0;
+  let committed = false;
   let outcome = { files: 0, dirs: 0, elapsed: 0 };
   if (scope === 'root') {
     const section = await probe.scanTree(root, { maxFiles: probe.SCAN_FILE_BUDGET });
@@ -123,6 +124,18 @@ async function runScan(flags) {
     // Same measurement the plugin runs: one implementation, so the CLI report and
     // the card cannot disagree about what counts as an unaccounted file.
     const measured = await measure({ root, catalog: loaded.catalog });
+    // A CLI scan is a look, not a commitment: only `--commit` moves the window, so a
+    // diagnostic run cannot quietly swallow the leaks someone is chasing.
+    if (flags.commit === true && measured.snapshot !== undefined) {
+      await store.writeIndex(root, {
+        schemaVersion: store.INDEX_SCHEMA_VERSION,
+        generatedAt: new Date().toISOString(),
+        baseline: measured.baseline,
+        files: measured.snapshot.files ?? files,
+        roots: Object.fromEntries(Object.entries(measured.snapshot.dirs ?? {}).map(([path, files]) => [path, { files }])),
+      });
+      committed = true;
+    }
     files = measured.result.files;
     dirs = measured.result.dirs;
     outcome = {
@@ -142,7 +155,7 @@ async function runScan(flags) {
     await store.writeScanExport(root, jsonName, exportDocument({ root, outcome: { ...outcome, files, dirs } }));
     exported = `.maid/reports/${jsonName}`;
   }
-  print({ ok: true, state: loaded.state, scope, files, dirs, report: `.maid/reports/${name}`, export: exported });
+  print({ ok: true, state: loaded.state, scope, files, dirs, committed, report: `.maid/reports/${name}`, export: exported });
 }
 
 /**

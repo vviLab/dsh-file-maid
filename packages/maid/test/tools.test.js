@@ -592,3 +592,36 @@ test('EX-05 the CLI writes the same pair as the tool', async (t) => {
   assert.ok(files.includes(printed.report.split('/').pop()));
   assert.ok(files.includes(printed.export.split('/').pop()));
 });
+
+test('EX-06 a CLI scan only moves the baseline when asked', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  const before = JSON.parse(await readFile(join(root, '.maid', 'index.json'), 'utf8')).generatedAt;
+  await writeFile(join(root, '30-Media', 'after.png'), 'x');
+
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const cli = join(import.meta.dirname, '..', 'scripts', 'cli.js');
+
+  const look = JSON.parse((await promisify(execFile)(process.execPath, [cli, 'scan', '--root', root])).stdout);
+  assert.equal(look.committed, false);
+  assert.equal(JSON.parse(await readFile(join(root, '.maid', 'index.json'), 'utf8')).generatedAt, before, 'a look does not move the window');
+
+  const commit = JSON.parse((await promisify(execFile)(process.execPath, [cli, 'scan', '--root', root, '--commit'])).stdout);
+  assert.equal(commit.committed, true);
+  const after = JSON.parse(await readFile(join(root, '.maid', 'index.json'), 'utf8'));
+  assert.notEqual(after.generatedAt, before, 'the window moved');
+  assert.equal(after.files, 1, 'the new file is in the baseline');
+  assert.deepEqual(Object.keys(after.roots).sort(), ['00-Specs', '10-Projects', '30-Media', '80-Outputs']);
+  assert.equal(after.roots['30-Media'].files, 1);
+});

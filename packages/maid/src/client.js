@@ -217,6 +217,7 @@ window.__ModuleLoader__.load({
         'scan.ledgerNote': '账本未覆盖本次窗口，只报数量',
         'scan.recordedIncomplete': '落点日志未覆盖',
         'scan.recordedNote': '本窗口内日志轮转过，清单不可靠，只报数量',
+        'scan.countMismatch': '这期间也有文件被删：净增按目录总数相减是 {net}，没记账的改动按文件算有 {n} 条，两个口径不同。',
         'scan.residualUnknown': '本窗口的日志没覆盖全，算不出这部分数量',
         'scan.factScope': '统计范围',
         'k.ledger': '经工具写盘',
@@ -462,6 +463,7 @@ window.__ModuleLoader__.load({
         'scan.freshBaseline': 'First scan: the baseline is recorded now, so the next scan can show what is new.',
         'scan.noLeak': 'no unrecorded changes',
         'scan.leakCount': '{n} changes without a record',
+        'scan.countMismatch': 'Files were also deleted in this window: the net change is {net} while {n} changes have no record — the two count different things.',
         'scan.residual': '{n} more only show up in the total; they cannot be named',
         'scan.ledgerNote': 'the ledger does not cover this window; counts only',
         'scan.recordedIncomplete': 'decision log rotated',
@@ -2426,6 +2428,12 @@ window.__ModuleLoader__.load({
                 ),
                 coverageLost
                   ? scanNote('ledgernote', decisionsGap ? t('scan.recordedNote') : t('scan.ledgerNote'))
+                  : null,
+                // The three cells are net counts; the leak list is per changed inode. A
+                // window where one file was deleted and another added shows 0 next to 1,
+                // and both numbers are right — say so instead of letting them argue.
+                Number.isFinite(reconcile.missing_total) && Number.isFinite(reconcile.new_files) && reconcile.missing_total > reconcile.new_files
+                  ? scanNote('mismatch', fill(t('scan.countMismatch'), { net: reconcile.new_files, n: reconcile.missing_total }))
                   : null,
                 reconcile.residual === null && reconcile.baseline !== true
                   ? scanNote('residual', t('scan.residualUnknown'))

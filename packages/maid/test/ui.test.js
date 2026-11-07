@@ -659,3 +659,13 @@ test('UI-77 a rescan asks for a second click while unrecorded changes are open',
   // Armed state expires on its own so a stray click cannot leave the button primed.
   assert.match(body, /setTimeout\(\(\) => setScanArmed\(false\), 4000\)/u);
 });
+
+test('UI-78 the card explains when the net change and the leak count disagree', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // Net change counts files; the leak list counts changed inodes. A window with one
+  // deletion and one addition shows "0" beside "1", and both are right.
+  assert.match(body, /reconcile\.missing_total > reconcile\.new_files/u);
+  assert.match(body, /'scan\.countMismatch': '这期间也有文件被删/u);
+  const en = body.slice(body.indexOf("'scan.countMismatch': 'Files were also deleted"));
+  assert.ok(en.length > 0, 'the English dictionary carries the same explanation');
+});
