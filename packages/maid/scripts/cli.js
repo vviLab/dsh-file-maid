@@ -161,7 +161,7 @@ async function runScan(flags) {
 /**
  * Run the `migrate` subcommand: rewrite a v3 catalog into the v5 schema.
  *
- * The two schemas differ in where routing lives (top-level `rules`) and in what
+ * The two schemas differ in where routing lives and in what
  * a directory carries (`includes`/`excludes` instead of `about`/`keywords`).
  * The old file is copied to `catalog.yml.v3.bak` before the rewrite, and the
  * rewrite goes through the same validator the plugin uses.
@@ -186,9 +186,8 @@ async function runMigrate(flags) {
     excludes: Array.isArray(dir.excludes) ? dir.excludes : [],
     examples: Array.isArray(dir.examples) ? dir.examples : [],
   }));
-  const oldRules = Array.isArray(document?.routing?.rules) ? document.routing.rules : [];
-  const rules = (Array.isArray(document?.rules) ? document.rules : oldRules).map((rule) => ({ match: rule.match, dir: rule.dir }));
-  const verdict = validateCatalog({ version: 1, root_default: document?.root_default, dirs, rules });
+  // Keyword rules are retired: a migrated catalog keeps its directories and nothing else.
+  const verdict = validateCatalog({ version: 1, root_default: document?.root_default, dirs });
   if (!verdict.ok) {
     print({ ok: false, code: 'E_MAID_SCHEMA', errors: verdict.errors });
     process.exitCode = 2;
@@ -196,7 +195,7 @@ async function runMigrate(flags) {
   }
   await probe.writeFileAtomic(join(root, '.maid', 'catalog.yml.v3.bak'), source, { mode: 0o600 });
   await store.writeCatalog(root, store.serializeCatalog(verdict.catalog, { root }));
-  print({ ok: true, dirs: verdict.catalog.dirs.length, rules: verdict.catalog.rules.length, warnings: verdict.warnings, backup: '.maid/catalog.yml.v3.bak' });
+  print({ ok: true, dirs: verdict.catalog.dirs.length, warnings: verdict.warnings, backup: '.maid/catalog.yml.v3.bak' });
 }
 
 /**

@@ -670,18 +670,13 @@ test('UI-78 the card explains when the net change and the leak count disagree', 
   assert.ok(en.length > 0, 'the English dictionary carries the same explanation');
 });
 
-test('UI-79 rules are listed and edited on the directory page', async () => {
+test('UI-79 the directory page carries no keyword rules', async () => {
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
-  assert.match(body, /'data-file-maid': 'rulegroup'/u);
-  assert.match(body, /'data-file-maid': 'rulematch'/u);
-  assert.match(body, /'data-file-maid': 'ruletarget'/u);
-  assert.match(body, /'data-file-maid': 'ruledir'/u);
-  assert.match(body, /writeRule\('rule-add'/u);
-  assert.match(body, /writeRule\('rule-remove'/u);
-  // The save button stays disabled until the rule can actually be written.
-  assert.match(body, /disabled: ruleBusy \|\| ruleForm\.match\.trim\(\)\.length === 0 \|\| ruleForm\.dir === ''/u);
-  // And the count comes from the projection, not from a local guess.
-  assert.match(body, /const rules = Array\.isArray\(catalog\?\.rules\)/u);
+  // Keyword matching was retired: routing belongs to the model, and a second dumber
+  // brain arguing with it only produced unexplained overrides.
+  assert.doesNotMatch(body, /'data-file-maid': 'rulegroup'/u);
+  assert.doesNotMatch(body, /writeRule\(/u);
+  assert.match(body, /const dirs = /u, 'the directory list is still the page');
 });
 
 test('UI-80 the card says how many files it could not name', async () => {

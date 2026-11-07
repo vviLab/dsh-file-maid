@@ -143,7 +143,7 @@ test('T-03 maid_put writes into the declared directory and records the decision'
   assert.match(log, /"decided_by":"default"/u);
 });
 
-test('T-04 a rule beats a caller directory and reports overridden', async (t) => {
+test('T-04 the caller directory is honoured, and a retired rules block does not override it', async (t) => {
   const root = await makeRoot();
   const { ctx, registered } = stubContext();
   const roots = createRoots({ ctx });
@@ -158,10 +158,9 @@ test('T-04 a rule beats a caller directory and reports overridden', async (t) =>
   });
 
   const result = await tool(registered, 'maid_put').execute({ name: '规范.md', content: 'x', intent: '写规范', dir: '80-Outputs' }, exec(agent));
-  assert.equal(result.data.decided_by, 'rule');
-  assert.equal(result.data.overridden, true);
-  assert.equal(result.data.proposed, '80-Outputs');
-  assert.equal(await readFile(join(root, '00-Specs', '规范.md'), 'utf8'), 'x');
+  assert.equal(result.data.decided_by, 'agent');
+  assert.equal(result.data.overridden, false);
+  assert.equal(await readFile(join(root, '80-Outputs', '规范.md'), 'utf8'), 'x');
 });
 
 test('T-05 an existing target is refused unless overwrite is set', async (t) => {

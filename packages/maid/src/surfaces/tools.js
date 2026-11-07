@@ -261,7 +261,7 @@ export function createTools(options) {
   const definitions = [
     {
       name: 'maid_put',
-      description: '把内容写进工作区里声明的目录：按 rules、dir、没命中时的目录三级裁决，原子写入并记账。新建文件用它，不要用 write。',
+      description: '把内容写进工作区里声明的目录：按 dir 与没命中时的目录两级裁决，原子写入并记账。新建文件用它，不要用 write。',
       parameters: {
         type: 'object',
         properties: {

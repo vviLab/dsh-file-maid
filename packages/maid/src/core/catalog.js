@@ -16,7 +16,7 @@ import { canonicalCatalogPath, validateCatalogPath } from './path.js';
 export const CATALOG_VERSION = 1;
 
 /** Keys understood at the document root; anything else is reported, not rejected. */
-const KNOWN_ROOT_KEYS = new Set(['version', 'root_default', 'dirs', 'rules', 'naming']);
+const KNOWN_ROOT_KEYS = new Set(['version', 'root_default', 'dirs', 'naming']);
 
 /** Keys understood on one `dirs[]` entry. */
 const KNOWN_DIR_KEYS = new Set(['path', 'role', 'purpose', 'includes', 'excludes', 'examples']);
@@ -33,13 +33,10 @@ export const PURPOSE_MAX = 200;
 export const EXCLUDES_MAX = 200;
 
 /**
- * `role` and `includes` are retired: still accepted so older catalogs keep loading,
- * never written again. A directory is described by its purpose sentence and its
- * refusal list, which is what both a person and the model read.
+ * `role`, `includes` and `rules` are retired: still accepted so older catalogs keep
+ * loading, never written again. A directory is described by its purpose sentence and
+ * its refusal list, which is what both a person and the model read.
  */
-
-/** Keys understood on one `rules[]` entry. */
-const KNOWN_RULE_KEYS = new Set(['match', 'dir']);
 
 /**
  * Build one diagnostic record.
@@ -191,37 +188,13 @@ export function validateCatalog(raw) {
     }
   }
 
-  const rules = [];
-  if (document.rules !== undefined) {
-    if (!Array.isArray(document.rules)) {
-      warnings.push(diag('E_MAID_SCHEMA', 'rules must be an array; ignored', 'rules'));
-    } else {
-      document.rules.forEach((entry, index) => {
-        const at = `rules[${index}]`;
-        if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
-          warnings.push(diag('E_MAID_SCHEMA', `${at} must be a mapping; ignored`, at));
-          return;
-        }
-        const record = /** @type {Record<string, unknown>} */ (entry);
-        for (const key of Object.keys(record)) {
-          if (!KNOWN_RULE_KEYS.has(key)) warnings.push(diag('E_MAID_UNKNOWN_KEY', `unknown key ignored at ${at}: ${key}`, at));
-        }
-        if (typeof record.match !== 'string' || record.match.trim().length === 0) {
-          warnings.push(diag('E_MAID_SCHEMA', `${at}.match must be a non-empty string; ignored`, at));
-          return;
-        }
-        if (typeof record.dir !== 'string' || record.dir.trim().length === 0) {
-          warnings.push(diag('E_MAID_SCHEMA', `${at}.dir must be a non-empty string; ignored`, at));
-          return;
-        }
-        const canonical = canonicalCatalogPath(record.dir);
-        if (!seenPaths.has(canonical)) {
-          warnings.push(diag('E_MAID_SCHEMA', `${at}.dir references an undeclared directory: ${canonical}; rule ignored`, at));
-          return;
-        }
-        rules.push({ match: record.match.trim().toLowerCase(), dir: canonical, index: rules.length });
-      });
-    }
+  // Keyword rules were retired: the routing decision belongs to the model, and a
+  // substring match was a second, dumber brain arguing with it. A catalog that still
+  // carries them keeps working; the entries are ignored and named in a warning.
+  if (Array.isArray(document.rules) && document.rules.length > 0) {
+    // An empty `rules: []` is what older versions wrote on every save; warning about
+    // it would make every migrated catalog look broken.
+    warnings.push(diag('E_MAID_RULES_RETIRED', 'rules are no longer used; routing reads purpose and excludes only', 'rules'));
   }
 
   if (document.naming !== undefined) {
@@ -232,7 +205,7 @@ export function validateCatalog(raw) {
 
   return {
     ok: true,
-    catalog: { version: CATALOG_VERSION, rootDefault, dirs, rules },
+    catalog: { version: CATALOG_VERSION, rootDefault, dirs },
     errors: [],
     warnings,
   };

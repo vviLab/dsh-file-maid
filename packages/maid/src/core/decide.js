@@ -1,11 +1,14 @@
 /**
  * Directory decision: the only place a target directory is chosen.
  *
- * Three levels, first hit wins: a `rules[].match` whose pattern appears in the
- * file name or the intent; the directory the caller named; the catalog's
- * `root_default`. The caller's own choice beats the default but never a rule,
- * and the result always says which level decided so the card and the log can
- * show it.
+ * Two levels, first hit wins: the directory the caller named, then the catalog's
+ * `root_default`. Keyword rules sat above both until they were retired — a
+ * substring match is a second, dumber brain arguing with the model, and when the
+ * two disagreed the file landed somewhere nobody asked for. The result always
+ * says which level decided, so the card and the log can show it.
+ *
+ * `purpose` and `excludes` never decide here: they are the sentence the model
+ * reads, and `rank()` uses them only to suggest candidates.
  *
  * Pure module: no I/O, no clocks, no randomness.
  * @module file-maid/core/decide
@@ -14,7 +17,7 @@ import { isDeclared } from './catalog.js';
 import { normalize } from './text.js';
 
 /** Levels that can decide a target, in precedence order. */
-export const LEVELS = Object.freeze(['rule', 'agent', 'default']);
+export const LEVELS = Object.freeze(['agent', 'default']);
 
 /** Maximum candidate directories returned for a human to inspect. */
 const CANDIDATE_LIMIT = 3;
@@ -101,29 +104,14 @@ export function rank(catalog, intent, name) {
 /**
  * Decide the target directory for one file.
  * @param {{ catalog: object, name: string, intent?: string, dir?: string }} input - decision inputs.
- * @returns {{ ok: true, dir: string, decided_by: 'rule'|'agent'|'default', overridden: boolean, proposed?: string, matched?: { match: string, dir: string, index: number }, candidates: object[] } | { ok: false, code: string, message: string }} the decision.
+ * @returns {{ ok: true, dir: string, decided_by: 'agent'|'default', overridden: boolean, proposed?: string, candidates: object[] } | { ok: false, code: string, message: string }} the decision.
  */
 export function decide(input) {
   const catalog = input.catalog;
   const name = normalize(input.name);
   const intent = normalize(input.intent ?? '');
   const proposed = typeof input.dir === 'string' && input.dir.trim().length > 0 ? input.dir.trim() : undefined;
-  const haystack = `${name} ${intent}`;
   const candidates = rank(catalog, intent, name);
-
-  for (const rule of catalog.rules) {
-    if (!rule.match || !haystack.includes(rule.match)) continue;
-    return {
-      ok: true,
-      dir: rule.dir,
-      decided_by: 'rule',
-      overridden: proposed !== undefined && proposed !== rule.dir,
-      proposed,
-      // The word that matched, not its position: the card shows this as the reason.
-      matched: { match: rule.match, dir: rule.dir, index: rule.index },
-      candidates,
-    };
-  }
 
   if (proposed !== undefined) {
     if (!isDeclared(catalog, proposed)) {

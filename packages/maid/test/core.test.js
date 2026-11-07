@@ -68,11 +68,11 @@ test('C-05 an empty purpose loads with a warning', () => {
   assert.equal(verdict.warnings.some((entry) => entry.code === 'E_MAID_PURPOSE_MISSING'), true);
 });
 
-test('C-06 a rule pointing at an undeclared directory is dropped', () => {
-  const verdict = validateCatalog(document({ rules: [{ match: '报告', dir: '99-Nowhere' }] }));
-  assert.equal(verdict.ok, true);
-  assert.deepEqual(verdict.catalog.rules, []);
-  assert.equal(verdict.warnings.some((entry) => entry.code === 'E_MAID_SCHEMA'), true);
+test('C-06 a retired rules block is ignored and said so', () => {
+  const verdict = validateCatalog(document({ rules: [{ match: '报告', dir: '80-Outputs' }] }));
+  assert.equal(verdict.ok, true, 'an older catalog still loads');
+  assert.equal(verdict.catalog.rules, undefined, 'no rules survive into the model');
+  assert.equal(verdict.warnings.some((entry) => entry.code === 'E_MAID_RULES_RETIRED'), true);
 });
 
 test('C-07 path traversal and reserved segments are refused', () => {
@@ -89,13 +89,13 @@ test('C-08 naming declarations are reported as not implemented', () => {
   assert.equal(verdict.warnings.some((entry) => entry.code === 'E_MAID_NOT_IMPLEMENTED'), true);
 });
 
-test('D-01 a rule wins over the caller directory and reports overridden', () => {
-  const catalog = validCatalog(document({ rules: [{ match: '规范', dir: '00-Specs' }] }));
+test('D-01 the caller directory wins; keyword matching no longer exists', () => {
+  const catalog = validCatalog(document());
   const decision = decide({ catalog, name: '规范附录.md', intent: '写规范', dir: '80-Outputs' });
   assert.equal(decision.ok, true);
-  assert.equal(decision.dir, '00-Specs');
-  assert.equal(decision.decided_by, 'rule');
-  assert.equal(decision.overridden, true);
+  assert.equal(decision.dir, '80-Outputs', 'what the model declared is honoured');
+  assert.equal(decision.decided_by, 'agent');
+  assert.equal(decision.overridden, false);
 });
 
 test('D-02 the caller directory wins over the default', () => {
@@ -127,11 +127,11 @@ test('D-05 candidates rank accepted purposes above refused ones', () => {
   assert.equal(decision.candidates[0].dir, '00-Specs');
 });
 
-test('D-06 a file name alone can trigger a rule', () => {
-  const catalog = validCatalog(document({ rules: [{ match: 'report', dir: '80-Outputs' }] }));
+test('D-06 a file name cannot route anything on its own', () => {
+  const catalog = validCatalog(document());
   const decision = decide({ catalog, name: 'report-2026.md' });
-  assert.equal(decision.decided_by, 'rule');
-  assert.equal(decision.dir, '80-Outputs');
+  assert.equal(decision.decided_by, 'default', 'without a declared directory the default applies');
+  assert.equal(decision.dir, catalog.rootDefault);
 });
 
 test('D-07 names that could escape the directory are refused', () => {

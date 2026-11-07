@@ -339,26 +339,11 @@ test('M-48 a too-long purpose is refused in words the card can show', async () =
   assert.match(result.errors[0].message, /最多 200 个字/u, 'not the parser English');
 });
 
-test('M-49 a rule can be added and removed through the save endpoint', async (t) => {
+test('M-49 the retired rule operations are refused', async (t) => {
   const { root, sessionId, surface } = await makeRoot(['00-Specs', '80-Outputs']);
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
-  const payload = (body) => JSON.stringify(body);
-
-  const added = await surface.service.save(root, sessionId, payload({ op: 'rule-add', match: '合同', dir: '80-Outputs' }));
-  assert.equal(added.ok, true, JSON.stringify(added));
-  const written = (await store.readCatalog(root)).catalog.rules;
-  assert.equal(written.length, 1);
-  assert.equal(written[0].match, '合同');
-  assert.equal(written[0].dir, '80-Outputs');
-
-  // First match wins in the decider, so a duplicate would silently shadow the older one.
-  const duplicate = await surface.service.save(root, sessionId, payload({ op: 'rule-add', match: '合同', dir: '00-Specs' }));
-  assert.equal(duplicate.ok, false);
-
-  const unknownDir = await surface.service.save(root, sessionId, payload({ op: 'rule-add', match: '发票', dir: '99-Nope' }));
-  assert.equal(unknownDir.ok, false);
-
-  const removed = await surface.service.save(root, sessionId, payload({ op: 'rule-remove', match: '合同' }));
-  assert.equal(removed.ok, true);
-  assert.deepEqual((await store.readCatalog(root)).catalog.rules, []);
+  for (const op of ['rule-add', 'rule-remove']) {
+    const result = await surface.service.save(root, sessionId, JSON.stringify({ op, match: '合同', dir: '80-Outputs' }));
+    assert.equal(result.ok, false, `${op} must not exist any more`);
+  }
 });

@@ -16,15 +16,15 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | C-03b | C-03b a retired role field is accepted and never written back | `core.test.js` |
 | C-04 | C-04 root_default must be one of the declared directories | `core.test.js` |
 | C-05 | C-05 an empty purpose loads with a warning | `core.test.js` |
-| C-06 | C-06 a rule pointing at an undeclared directory is dropped | `core.test.js` |
+| C-06 | C-06 a retired rules block is ignored and said so | `core.test.js` |
 | C-07 | C-07 path traversal and reserved segments are refused | `core.test.js` |
 | C-08 | C-08 naming declarations are reported as not implemented | `core.test.js` |
-| D-01 | D-01 a rule wins over the caller directory and reports overridden | `core.test.js` |
+| D-01 | D-01 the caller directory wins; keyword matching no longer exists | `core.test.js` |
 | D-02 | D-02 the caller directory wins over the default | `core.test.js` |
 | D-03 | D-03 the default catches everything else | `core.test.js` |
 | D-04 | D-04 an undeclared caller directory is refused, not defaulted | `core.test.js` |
 | D-05 | D-05 candidates rank accepted purposes above refused ones | `core.test.js` |
-| D-06 | D-06 a file name alone can trigger a rule | `core.test.js` |
+| D-06 | D-06 a file name cannot route anything on its own | `core.test.js` |
 | D-07 | D-07 names that could escape the directory are refused | `core.test.js` |
 | X-01 | X-01 the session tail keeps the newest text within one fence | `core.test.js` |
 | R-01 | R-01 the gap is new files minus recorded writes | `core.test.js` |
@@ -77,7 +77,7 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | T-01 | T-01 the four tools register with the shared envelope schema | `tools.test.js` |
 | T-02 | T-02 an uninitialized root answers UNINITIALIZED and writes nothing | `tools.test.js` |
 | T-03 | T-03 maid_put writes into the declared directory and records the decision | `tools.test.js` |
-| T-04 | T-04 a rule beats a caller directory and reports overridden | `tools.test.js` |
+| T-04 | T-04 the caller directory is honoured, and a retired rules block does not override it | `tools.test.js` |
 | T-05 | T-05 an existing target is refused unless overwrite is set | `tools.test.js` |
 | T-06 | T-06 an undeclared directory is refused and nothing is written | `tools.test.js` |
 | T-07 | T-07 a read-only session persists nothing | `tools.test.js` |
@@ -267,10 +267,10 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | EX-06 | EX-06 a CLI scan only moves the baseline when asked | `tools.test.js` |
 | UI-77 | UI-77 a rescan asks for a second click while unrecorded changes are open | `ui.test.js` |
 | UI-78 | UI-78 the card explains when the net change and the leak count disagree | `ui.test.js` |
-| M-49 | M-49 a rule can be added and removed through the save endpoint | `manage.test.js` |
+| M-49 | M-49 the retired rule operations are refused | `manage.test.js` |
 | R-39 | R-39 a name that only works on one platform is refused with a reason | `runtime.test.js` |
 | R-40 | R-40 the naming refusal reaches the caller as a list | `runtime.test.js` |
-| UI-79 | UI-79 rules are listed and edited on the directory page | `ui.test.js` |
+| UI-79 | UI-79 the directory page carries no keyword rules | `ui.test.js` |
 | R-41 | R-41 a rotation names what came after it and counts the rest | `ack.test.js` |
 | R-42 | R-42 without a rotation instant the whole window stays a count | `ack.test.js` |
 | UI-80 | UI-80 the card says how many files it could not name | `ui.test.js` |

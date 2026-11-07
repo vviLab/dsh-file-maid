@@ -46,13 +46,12 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 
 ## 判定链
 
-三级，首命中生效，结果带 `decided_by`：
+两级，首命中生效，结果带 `decided_by`：
 
-1. `rules[].match` 命中文件名或用途文本 → `rule`；
-2. 调用方传入的 `dir`，须在 catalog 中声明 → `agent`；
-3. catalog 的 `root_default` → `default`。
+1. 调用方传入的 `dir`，须在 catalog 中声明 → `agent`；
+2. catalog 的 `root_default` → `default`。
 
-调用方自报的目录能压过默认落点，压不过规则；命中规则时返回 `overridden: true` 与 `proposed`，调用方因此知道自己被改道。`dir` 不在声明集合内直接拒绝（`E_MAID_DIR`），不静默回退。
+`dir` 不在声明集合内直接拒绝（`E_MAID_DIR`），不静默回退。旧版本还有一级 `rules[].match`（关键词 → 目录），2026-11 已撤掉：路由由模型判断，关键词匹配是第二套更笨的判断链，两者冲突时文件会落到没人要的地方。老配置里保留 `rules:` 仍能加载，插件忽略并给警告（`E_MAID_RULES_RETIRED`）。
 
 用途文本（`intent`）的来源优先级：参数 > 会话尾部 2000 字符（`ctx.sessions.get(id).deriveMessages()`）> 无。来源写进结果与日志，事后可判断「模型真说了用途」还是「工具自己猜的」。
 
@@ -60,7 +59,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 
 | 路径 | 内容 | 权限 |
 | --- | --- | --- |
-| `catalog.yml` | 唯一路由来源：`version`、`root_default`、`dirs[]`、`rules[]` | `0600` |
+| `catalog.yml` | 唯一路由来源：`version`、`root_default`、`dirs[]` | `0600` |
 | `index.json` | 上一次扫描的每目录文件数基线 | `0600` |
 | `status.json` | 只读投影，卡片读它，判定从不读回 | `0600` |
 | `decisions.jsonl` | 每次落点判定一条：名字、目录、`decided_by`、`intent_source` | `0600` |
@@ -74,7 +73,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 
 ## 提示词层
 
-注入节含一张表（目录 / 收什么 / 排除）与五条规则，上限 1400 字符。超预算时先丢「排除」列，再丢整行并留一行「还有 N 个目录」。同一份 catalog 渲染字节一致，未初始化时整节不出现，`order: 300`。
+注入节含一张表（目录 / 收什么 / 排除）与六条行为规则，上限 1400 字符。超预算时先丢「排除」列，再丢整行并留一行「还有 N 个目录」。同一份 catalog 渲染字节一致，未初始化时整节不出现，`order: 300`。
 
 ## Web 视图
 
@@ -86,7 +85,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | 路由 | `status.routes[]`：最近的落点判定与依据 |
 | 扫描 | 本次扫描、新增文件去哪了（净增 / 经 maid_put / 经工具写盘）、根与基线 |
 
-「目录」页签带一个规则区：一行一条「匹配词 → 目录」，命中匹配词的文件直接进那个目录（先命中的先算，重复的匹配词会被拒绝）。同一页还有一个目录管理器：新建、编辑、删除三个动作，编辑时勾「没命中规则时，文件放这里」即可把它设成判断不出来时归入的目录（`makeDefault: true`），字段是路径 / 用途 / 排除（可空）。写入走六个 Host 端点 `fileMaid/draft`（只校验一条待添加路径）、`fileMaid/pick`、`fileMaid/save`（目录增删改，以及 `op:'rule-add'`／`'rule-remove'` 增删规则）、`fileMaid/scan`、`fileMaid/review`、`fileMaid/ack`：
+「目录」页签是一个目录管理器：新建、编辑、删除三个动作，编辑时勾「没指定目录时，文件放这里」即可把它设成判断不出来时归入的目录（`makeDefault: true`），字段是路径 / 用途 / 排除（可空）。写入走六个 Host 端点 `fileMaid/draft`（只校验一条待添加路径）、`fileMaid/pick`、`fileMaid/save`（目录增删改）、`fileMaid/scan`、`fileMaid/review`、`fileMaid/ack`：
 
 | 动作 | 行为 |
 | --- | --- |
@@ -195,6 +194,6 @@ node scripts/cli.js migrate --root <dir>   # v3 catalog → v5，原文件留作
 | `purpose` | 人、模型 | 一句话说明这个目录收什么；它就是提示词表格里的「收什么」列 |
 | `excludes` | 人、模型 | 一句话说明什么不该放这里；表格的「排除」列。可空，空时卡片不显示这一行、表格显示 `—`。旧文件里的词数组仍可加载，会拼成一句话 |
 
-裁决本身不看这两个字段（只看 `rules[].match` → 调用方 `dir` → `root_default`），它们影响的是**模型读到的目录表**与 `candidates` 排序：排序把 `purpose` 按标点切短语、再取两字窗口做子串匹配，因此「工作区通用规范文件」也能命中意图里的「规范」。
+裁决本身不看这两个字段（只看调用方 `dir` → `root_default`），它们影响的是**模型读到的目录表**与 `candidates` 排序：排序把 `purpose` 按标点切短语、再取两字窗口做子串匹配，因此「工作区通用规范文件」也能命中意图里的「规范」。
 
 `includes` 与 `role` 已退役：旧文件里仍可存在，加载时忽略，写回时不再输出。

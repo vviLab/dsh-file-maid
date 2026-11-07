@@ -440,7 +440,6 @@ export function serializeCatalog(catalog, meta) {
       excludes: typeof dir.excludes === 'string' && dir.excludes.length > 0 ? dir.excludes : undefined,
       examples: optional(dir.examples),
     })),
-    rules: catalog.rules.map((entry) => ({ match: entry.match, dir: entry.dir })),
   };
   const header = [
     `# file-maid catalog for ${meta.root}`,
@@ -561,7 +560,7 @@ export function templateCatalog(input) {
   if (preferred === undefined) {
     return { error: { code: 'E_MAID_SCHEMA', message: 'the controlled root has no directory a template could declare' } };
   }
-  const verdict = validateCatalog({ version: 1, root_default: preferred.path, dirs, rules: [] });
+  const verdict = validateCatalog({ version: 1, root_default: preferred.path, dirs });
   if (!verdict.ok) return { error: verdict.errors[0] };
   return { catalog: verdict.catalog, pending: dirs.length };
 }
