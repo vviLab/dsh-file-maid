@@ -3,7 +3,7 @@
  *
  * The provider is pure and synchronous: it renders whatever catalog the
  * runtime already holds and never touches the filesystem. The section carries
- * a table and five rules, and it is the only place the model learns that
+ * a table and six behaviour rules, and it is the only place the model learns that
  * `maid_put` exists — so its budget is enforced here, not hoped for.
  * @module file-maid/surfaces/prompt
  */

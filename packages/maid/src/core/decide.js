@@ -16,9 +16,6 @@
 import { isDeclared } from './catalog.js';
 import { normalize } from './text.js';
 
-/** Levels that can decide a target, in precedence order. */
-export const LEVELS = Object.freeze(['agent', 'default']);
-
 /** Maximum candidate directories returned for a human to inspect. */
 const CANDIDATE_LIMIT = 3;
 
@@ -104,7 +101,7 @@ export function rank(catalog, intent, name) {
 /**
  * Decide the target directory for one file.
  * @param {{ catalog: object, name: string, intent?: string, dir?: string }} input - decision inputs.
- * @returns {{ ok: true, dir: string, decided_by: 'agent'|'default', overridden: boolean, proposed?: string, candidates: object[] } | { ok: false, code: string, message: string }} the decision.
+ * @returns {{ ok: true, dir: string, decided_by: 'agent'|'default', candidates: object[] } | { ok: false, code: string, message: string }} the decision.
  */
 export function decide(input) {
   const catalog = input.catalog;
@@ -117,8 +114,8 @@ export function decide(input) {
     if (!isDeclared(catalog, proposed)) {
       return { ok: false, code: 'E_MAID_DIR', message: `directory is not declared in .maid/catalog.yml: ${proposed}` };
     }
-    return { ok: true, dir: proposed, decided_by: 'agent', overridden: false, proposed, candidates };
+    return { ok: true, dir: proposed, decided_by: 'agent', candidates };
   }
 
-  return { ok: true, dir: catalog.rootDefault, decided_by: 'default', overridden: false, proposed, candidates };
+  return { ok: true, dir: catalog.rootDefault, decided_by: 'default', candidates };
 }

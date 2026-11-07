@@ -95,7 +95,6 @@ test('D-01 the caller directory wins; keyword matching no longer exists', () => 
   assert.equal(decision.ok, true);
   assert.equal(decision.dir, '80-Outputs', 'what the model declared is honoured');
   assert.equal(decision.decided_by, 'agent');
-  assert.equal(decision.overridden, false);
 });
 
 test('D-02 the caller directory wins over the default', () => {
@@ -103,7 +102,6 @@ test('D-02 the caller directory wins over the default', () => {
   const decision = decide({ catalog, name: 'a.md', intent: '项目里的事', dir: '10-Projects' });
   assert.equal(decision.dir, '10-Projects');
   assert.equal(decision.decided_by, 'agent');
-  assert.equal(decision.overridden, false);
 });
 
 test('D-03 the default catches everything else', () => {

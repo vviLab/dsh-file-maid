@@ -1,25 +1,20 @@
 /**
  * Placement: the only code that writes a routed file.
  *
- * `decide` answers which directory; this module writes into it. Separating
- * them keeps the decision pure and gives the naming-validation hook one
- * obvious place to land later — between a decided directory and a write that
- * has already happened.
+ * `decide` answers which directory; this module judges the file name and writes.
+ * Keeping them apart means the decision stays pure and the naming check sits in
+ * exactly one place: after a directory is chosen, before bytes hit the disk.
  * @module file-maid/runtime/place
  */
 import { join } from 'node:path';
 import * as probe from '../state/probe.js';
 
-/** Hook name reserved for naming validation; no rule runs in this version. */
-export const VALIDATE_HOOK = 'naming';
-
 /**
- * Judge one target against the naming rules.
+ * Judge one target before it is written.
  *
- * The hook exists so a later version can add rules without touching the write
- * path. It returns no violations today, and callers already treat a non-empty
- * list as a refusal.
- * @param {{ name: string, dir: string }} _input - the decided target.
+ * Callers treat a non-empty list as a refusal, so this is the single gate every
+ * routed write passes through.
+ * @param {{ name: string, dir: string }} input - the decided target.
  * @returns {{ code: string, message: string }[]} violations; empty when acceptable.
  */
 export function validateTarget(input) {

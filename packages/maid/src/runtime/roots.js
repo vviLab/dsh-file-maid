@@ -405,7 +405,6 @@ export function createRoots(options) {
         dir: record.dir ?? '',
         decided_by: record.decided_by ?? null,
         intent_source: record.intent_source ?? null,
-        overridden: record.overridden === true,
       })),
     };
     try {

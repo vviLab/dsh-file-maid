@@ -320,8 +320,6 @@ export function createTools(options) {
           dir: decision.dir,
           decided_by: decision.decided_by,
           intent_source,
-          overridden: decision.overridden,
-          proposed: decision.proposed ?? null,
           path: outcome.path,
         });
         // The card reads `status.json`, so a write the card cannot see is a write
@@ -338,9 +336,7 @@ export function createTools(options) {
             name: checked.name,
             decided_by: decision.decided_by,
             intent_source,
-            overridden: decision.overridden,
             proposed: decision.proposed ?? null,
-            matched: decision.matched ?? null,
             candidates: decision.candidates,
             violations: outcome.violations ?? [],
             bytes: outcome.bytes,
@@ -390,9 +386,6 @@ export function createTools(options) {
             path: `${decision.dir}/${checked.name}`,
             decided_by: decision.decided_by,
             intent_source,
-            overridden: decision.overridden,
-            proposed: decision.proposed ?? null,
-            matched: decision.matched ?? null,
             candidates: decision.candidates,
             persisted: false,
           },

@@ -159,7 +159,6 @@ test('T-04 the caller directory is honoured, and a retired rules block does not 
 
   const result = await tool(registered, 'maid_put').execute({ name: '规范.md', content: 'x', intent: '写规范', dir: '80-Outputs' }, exec(agent));
   assert.equal(result.data.decided_by, 'agent');
-  assert.equal(result.data.overridden, false);
   assert.equal(await readFile(join(root, '80-Outputs', '规范.md'), 'utf8'), 'x');
 });
 
