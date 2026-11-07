@@ -288,6 +288,7 @@ async function runReview(flags) {
       recorded_files: reconciliation.recorded_files,
       ledger_files: reconciliation.ledger_files,
       missing: reconciliation.missing.length,
+      unknown_files: reconciliation.unknown_files ?? 0,
       residual: reconciliation.residual,
     },
     missing: reconciliation.missing,
