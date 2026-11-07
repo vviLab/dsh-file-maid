@@ -267,3 +267,7 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | EX-06 | EX-06 a CLI scan only moves the baseline when asked | `tools.test.js` |
 | UI-77 | UI-77 a rescan asks for a second click while unrecorded changes are open | `ui.test.js` |
 | UI-78 | UI-78 the card explains when the net change and the leak count disagree | `ui.test.js` |
+| M-49 | M-49 a rule can be added and removed through the save endpoint | `manage.test.js` |
+| R-39 | R-39 a name that only works on one platform is refused with a reason | `runtime.test.js` |
+| R-40 | R-40 the naming refusal reaches the caller as a list | `runtime.test.js` |
+| UI-79 | UI-79 rules are listed and edited on the directory page | `ui.test.js` |

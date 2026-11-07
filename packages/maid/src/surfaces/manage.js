@@ -24,7 +24,7 @@ export const REMOTE_PACKAGE = 'dsh-file-maid';
 export const REMOTE_NAMESPACE = 'fileMaid';
 
 /** Operations this surface accepts. */
-export const OPS = Object.freeze(['add', 'update', 'remove']);
+export const OPS = Object.freeze(['add', 'update', 'remove', 'rule-add', 'rule-remove']);
 
 /** Result codec: the envelope is handed over as-is. */
 const RESULT_CODEC = Object.freeze({ mode: 'src-json' });
@@ -303,6 +303,28 @@ export function createManageSurface(options) {
     const op = payload.op === 'edit' ? 'update' : payload.op;
     if (!OPS.includes(op)) {
       return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: `op must be one of ${OPS.join(', ')}` }] };
+    }
+    if (op === 'rule-add' || op === 'rule-remove') {
+      const match = typeof payload.match === 'string' ? payload.match.trim() : '';
+      if (match.length === 0) return { ok: false, errors: [{ code: 'E_MAID_RULE', message: '匹配词不能为空，写下这个说法代表哪类文件。' }] };
+      if (match.length > 40) return { ok: false, errors: [{ code: 'E_MAID_RULE', message: '匹配词最多 40 个字，写一个词就够了。' }] };
+      const rules = (catalog.rules ?? []).map((rule) => ({ ...rule }));
+      if (op === 'rule-remove') {
+        const kept = rules.filter((rule) => rule.match !== match);
+        if (kept.length === rules.length) return { ok: false, errors: [{ code: 'E_MAID_RULE', message: `没有叫「${match}」的规则。` }] };
+        return { ok: true, dirs: catalog.dirs.map((dir) => ({ ...dir })), rootDefault: catalog.rootDefault, rules: kept };
+      }
+      const dir = typeof payload.dir === 'string' ? payload.dir.trim() : '';
+      if (dir.length === 0 || !catalog.dirs.some((item) => item.path === dir)) {
+        return { ok: false, errors: [{ code: 'E_MAID_RULE', message: '先选一个已有目录，规则指向的目录必须在列表里。' }] };
+      }
+      // First match wins in the decider, so a duplicate would silently shadow the
+      // older rule; refuse it and let the operator edit the existing one.
+      if (rules.some((rule) => rule.match === match)) {
+        return { ok: false, errors: [{ code: 'E_MAID_RULE', message: `已经有「${match}」这条规则了，先删掉再加。` }] };
+      }
+      rules.push({ match, dir });
+      return { ok: true, dirs: catalog.dirs.map((item) => ({ ...item })), rootDefault: catalog.rootDefault, rules };
     }
     const rawPath = typeof payload.path === 'string' ? payload.path.trim() : '';
     if (rawPath.length === 0) {
@@ -797,7 +819,7 @@ export function createManageSurface(options) {
       const next = await applyOperation(loaded.catalog, decoded.value, owned.root);
       if (!next.ok) return { ok: false, errors: next.errors };
 
-      const verdict = validateCatalog({ version: 1, root_default: next.rootDefault, dirs: next.dirs, rules: loaded.catalog.rules });
+      const verdict = validateCatalog({ version: 1, root_default: next.rootDefault, dirs: next.dirs, rules: next.rules ?? loaded.catalog.rules });
       if (!verdict.ok) return { ok: false, errors: humanErrors(verdict.errors) };
 
       try {
@@ -810,7 +832,8 @@ export function createManageSurface(options) {
       try {
         await store.appendLog(owned.root, 'audit', {
           op: decoded.value.op,
-          path: canonicalCatalogPath(String(decoded.value.path)),
+          path: typeof decoded.value.path === 'string' && decoded.value.path.length > 0 ? canonicalCatalogPath(decoded.value.path) : undefined,
+          match: decoded.value.match,
           session: sessionId,
         });
       } catch {

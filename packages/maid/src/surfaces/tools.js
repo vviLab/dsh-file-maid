@@ -300,7 +300,15 @@ export function createTools(options) {
         if (!outcome.ok) {
           return envelope({
             verdict: 'ERROR',
-            data: { root, name: checked.name, dir: decision.dir, path: outcome.path },
+            data: {
+              root,
+              name: checked.name,
+              dir: decision.dir,
+              path: outcome.path,
+              // Naming refusals come back as a list so the model can fix the name
+              // instead of guessing which rule it broke.
+              violations: outcome.violations ?? [],
+            },
             errors: [{ code: outcome.code, message: outcome.message }],
             warnings: status.warnings,
           });
@@ -333,7 +341,7 @@ export function createTools(options) {
             proposed: decision.proposed ?? null,
             matched: decision.matched ?? null,
             candidates: decision.candidates,
-            violations: [],
+            violations: outcome.violations ?? [],
             bytes: outcome.bytes,
             createdDirs: outcome.createdDirs,
             persisted: !readOnly,

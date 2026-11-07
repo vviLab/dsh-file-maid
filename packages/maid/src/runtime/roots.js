@@ -381,6 +381,7 @@ export function createRoots(options) {
         hash: entry.catalogHash ?? null,
         rootDefault: catalog?.rootDefault ?? null,
         ruleCount: catalog?.rules?.length ?? 0,
+        rules: (catalog?.rules ?? []).map((rule) => ({ match: rule.match, dir: rule.dir })),
         dirs: directories,
         errors: [...(entry.errors ?? [])],
         warnings: [...(entry.warnings ?? [])],

@@ -669,3 +669,17 @@ test('UI-78 the card explains when the net change and the leak count disagree', 
   const en = body.slice(body.indexOf("'scan.countMismatch': 'Files were also deleted"));
   assert.ok(en.length > 0, 'the English dictionary carries the same explanation');
 });
+
+test('UI-79 rules are listed and edited on the directory page', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /'data-file-maid': 'rulegroup'/u);
+  assert.match(body, /'data-file-maid': 'rulematch'/u);
+  assert.match(body, /'data-file-maid': 'ruletarget'/u);
+  assert.match(body, /'data-file-maid': 'ruledir'/u);
+  assert.match(body, /writeRule\('rule-add'/u);
+  assert.match(body, /writeRule\('rule-remove'/u);
+  // The save button stays disabled until the rule can actually be written.
+  assert.match(body, /disabled: ruleBusy \|\| ruleForm\.match\.trim\(\)\.length === 0 \|\| ruleForm\.dir === ''/u);
+  // And the count comes from the projection, not from a local guess.
+  assert.match(body, /const rules = Array\.isArray\(catalog\?\.rules\)/u);
+});

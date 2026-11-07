@@ -181,6 +181,16 @@ window.__ModuleLoader__.load({
         'section.misplaced': '最近落点',
         'section.scan': '本次扫描',
         'section.params': '判定参数',
+        'section.rules': '规则',
+        'rule.add': '＋ 添加规则',
+        'rule.empty': '还没有规则。命中匹配词的文件会直接放进指定目录，不用每次都靠用途猜。',
+        'rule.match': '匹配词',
+        'rule.matchHint': '例如：合同',
+        'rule.target': '放进',
+        'rule.save': '保存',
+        'rule.cancel': '取消',
+        'rule.delete': '删除',
+        'rule.failed': '规则没有保存，稍后再试。',
         'section.reconcile': '新增文件去哪了',
         'section.missing': '漏网文件',
         'scan.rerun': '重新扫描',
@@ -431,6 +441,16 @@ window.__ModuleLoader__.load({
         'section.misplaced': 'Recent decisions',
         'section.scan': 'This scan',
         'section.params': 'Decision rules',
+        'section.rules': 'Rules',
+        'rule.add': '+ Add rule',
+        'rule.empty': 'No rules yet. A file whose name or purpose matches a keyword goes straight to the folder you pick.',
+        'rule.match': 'keyword',
+        'rule.matchHint': 'for example: contract',
+        'rule.target': 'into',
+        'rule.save': 'Save',
+        'rule.cancel': 'Cancel',
+        'rule.delete': 'Delete',
+        'rule.failed': 'The rule was not saved; try again.',
         'section.reconcile': 'Where new files went',
         'section.missing': 'Unaccounted files',
         'scan.rerun': 'Scan now',
@@ -1205,6 +1225,17 @@ window.__ModuleLoader__.load({
             '[data-file-maid="scanaside"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
             '[data-file-maid="scannote"]{margin-top:4px;font-size:var(--maid-fs-meta);line-height:1.4;min-height:15px;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanrows"]{display:flex;flex-direction:column;margin-top:0;min-width:0;}',
+            '[data-file-maid="rulegroup"]{margin-top:10px;border-top:1px solid var(--dsw-alias-border-l1);padding-top:8px;}',
+            '[data-file-maid="rulecount"]{font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="rulelist"]{display:flex;flex-direction:column;gap:2px;}',
+            '[data-file-maid="rulerow"]{display:flex;align-items:center;gap:6px;min-height:24px;font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="rulematch"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="ruletarget"]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="ruleform"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;}',
+            '[data-file-maid="ruleinput"]{flex:1 1 96px;min-width:0;height:26px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;background:none;color:inherit;font:inherit;}',
+            '[data-file-maid="ruledir"]{height:26px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;background:none;color:inherit;font:inherit;}',
+            '[data-file-maid="rulesave"]{min-height:26px;padding:0 8px;border:1px solid var(--dsw-alias-brand-primary);border-radius:6px;background:none;color:var(--dsw-alias-brand-primary);font-size:var(--maid-fs-meta);cursor:pointer;}',
+            '[data-file-maid="rulesave"]:disabled{opacity:.5;cursor:not-allowed;}',
             '[data-file-maid="missrow"]{min-width:0;padding:3px 0;border-top:1px solid var(--dsw-alias-border-l1);}',
             '[data-file-maid="missrow"]:first-child{border-top:0;}',
             '[data-file-maid="misstoggle"]{display:flex;align-items:baseline;gap:6px;width:100%;min-height:20px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;}',
@@ -1377,6 +1408,10 @@ window.__ModuleLoader__.load({
           const [openLeak, setOpenLeak] = React.useState('');
           const [openAcked, setOpenAcked] = React.useState(false);
           const [exportWanted, setExportWanted] = React.useState(false);
+          /** The rule form: `undefined` when closed, otherwise the row being written. */
+          const [ruleForm, setRuleForm] = React.useState(undefined);
+          const [ruleBusy, setRuleBusy] = React.useState(false);
+          const [ruleNotice, setRuleNotice] = React.useState('');
           const [state, setState] = React.useState({ phase: 'loading', status: undefined, message: '', forReader: '' });
           const [openDir, setOpenDir] = React.useState('');
           /** The directory form: `undefined` when closed, otherwise the row being edited. */
@@ -2709,6 +2744,114 @@ window.__ModuleLoader__.load({
                   h('span', { 'data-file-maid': 'morebarglyph', 'aria-hidden': 'true' }, showAllDirs ? '▴' : '▾'),
                 )
               : null;
+          const rules = Array.isArray(catalog?.rules) ? catalog.rules : [];
+          /**
+           * Add or remove one rule. The first matching rule wins in the decider, so the
+           * Host refuses a duplicate instead of letting a new one quietly shadow it.
+           * @param {'rule-add' | 'rule-remove'} op - what to do.
+           * @param {{ match?: string, dir?: string }} body - the rule.
+           * @returns {Promise<boolean>} whether the Host accepted it.
+           */
+          const writeRule = async (op, body) => {
+            setRuleBusy(true);
+            setRuleNotice('');
+            const result = await callRemote('save', root, readerId, JSON.stringify({ op, ...body }));
+            setRuleBusy(false);
+            if (result?.ok !== true) {
+              setRuleNotice(describeError(result, t('rule.failed')));
+              return false;
+            }
+            setRevision((value) => value + 1);
+            return true;
+          };
+
+          const ruleRows = rules.map((rule) =>
+            h(
+              'div',
+              { key: `rule-${rule.match}`, 'data-file-maid': 'rulerow' },
+              h('span', { 'data-file-maid': 'rulematch' }, rule.match),
+              h('span', { 'data-file-maid': 'ruletarget' }, `→ ${rule.dir}`),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  'data-file-maid': 'linkbutton',
+                  disabled: ruleBusy,
+                  onClick: () => void writeRule('rule-remove', { match: rule.match }),
+                },
+                t('rule.delete'),
+              ),
+            ),
+          );
+
+          const ruleFormNode = ruleForm === undefined
+            ? null
+            : h(
+                'div',
+                { 'data-file-maid': 'ruleform' },
+                h('input', {
+                  type: 'text',
+                  'data-file-maid': 'ruleinput',
+                  'aria-label': t('rule.match'),
+                  placeholder: t('rule.matchHint'),
+                  maxLength: 40,
+                  value: ruleForm.match,
+                  onChange: (event) => setRuleForm({ ...ruleForm, match: event.target.value }),
+                }),
+                h(
+                  'select',
+                  {
+                    'data-file-maid': 'ruledir',
+                    'aria-label': t('rule.target'),
+                    value: ruleForm.dir,
+                    onChange: (event) => setRuleForm({ ...ruleForm, dir: event.target.value }),
+                  },
+                  dirs.map((dir) => h('option', { key: dir.path, value: dir.path }, dir.path)),
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    'data-file-maid': 'rulesave',
+                    'data-tone': 'brand',
+                    disabled: ruleBusy || ruleForm.match.trim().length === 0 || ruleForm.dir === '',
+                    onClick: () => {
+                      void writeRule('rule-add', { match: ruleForm.match.trim(), dir: ruleForm.dir }).then((done) => {
+                        if (done) setRuleForm(undefined);
+                      });
+                    },
+                  },
+                  t('rule.save'),
+                ),
+                h('button', { type: 'button', 'data-file-maid': 'linkbutton', onClick: () => setRuleForm(undefined) }, t('rule.cancel')),
+              );
+
+          const rulesBlock = h(
+            'div',
+            { 'data-file-maid': 'rulegroup' },
+            h(
+              'div',
+              { 'data-file-maid': 'sectionhead' },
+              h('span', { 'data-file-maid': 'rulecount' }, `${t('section.rules')} ${rules.length}`),
+              h('span', { 'data-file-maid': 'spacer' }),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  'data-file-maid': 'ghostbutton',
+                  onClick: () => setRuleForm(ruleForm === undefined ? { match: '', dir: dirs[0]?.path ?? '' } : undefined),
+                },
+                t('rule.add'),
+              ),
+            ),
+            rules.length === 0 && ruleForm === undefined
+              ? h('div', { 'data-file-maid': 'scannote' }, t('rule.empty'))
+              : null,
+            rules.length === 0 ? null : h('div', { 'data-file-maid': 'rulelist' }, ...ruleRows),
+            ruleNotice === '' ? null : h('div', { 'data-file-maid': 'rowerror' }, ruleNotice),
+            ruleFormNode,
+          );
+
           /**
            * Open the directory form on one row, or on an empty one for `add`.
            * @param {'add' | 'edit'} mode - which operation the form will send.
@@ -2965,6 +3108,7 @@ window.__ModuleLoader__.load({
                     : emptyState(t('section.catalog'), hintText)
                   : h('div', { 'data-file-maid': 'tablist', id: 'file-maid-dirlist' }, visibleRows),
                 moreRow,
+                dirs.length === 0 ? null : rulesBlock,
               )
             : h(
                 React.Fragment,
@@ -2982,6 +3126,7 @@ window.__ModuleLoader__.load({
                     ),
                 manageBox,
                 table,
+                rulesBlock,
               );
 
           /**

@@ -86,7 +86,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | 路由 | `status.routes[]`：最近的落点判定与依据 |
 | 扫描 | 本次扫描、新增文件去哪了（净增 / 经 maid_put / 经工具写盘）、根与基线 |
 
-「目录」页签带一个目录管理器：新建、编辑、删除三个动作，编辑时勾「没命中规则时，文件放这里」即可把它设成判断不出来时归入的目录（`makeDefault: true`），字段是路径 / 用途 / 排除（可空）。写入走四个 Host 端点 `fileMaid/draft`（只校验一条待添加路径）、`fileMaid/pick`、`fileMaid/save` 与 `fileMaid/scan`：
+「目录」页签带一个规则区：一行一条「匹配词 → 目录」，命中匹配词的文件直接进那个目录（先命中的先算，重复的匹配词会被拒绝）。同一页还有一个目录管理器：新建、编辑、删除三个动作，编辑时勾「没命中规则时，文件放这里」即可把它设成判断不出来时归入的目录（`makeDefault: true`），字段是路径 / 用途 / 排除（可空）。写入走六个 Host 端点 `fileMaid/draft`（只校验一条待添加路径）、`fileMaid/pick`、`fileMaid/save`（目录增删改，以及 `op:'rule-add'`／`'rule-remove'` 增删规则）、`fileMaid/scan`、`fileMaid/review`、`fileMaid/ack`：
 
 | 动作 | 行为 |
 | --- | --- |
@@ -179,7 +179,7 @@ node scripts/cli.js migrate --root <dir>   # v3 catalog → v5，原文件留作
 1. 下载、导出、`bash` 重定向、`mv`/`cp`、外部进程与其他插件的写入不经写入通道，只由对账事后估算。
 2. 受控根之外的目录完全不参与判定，包括 `70-Downloads` 这类外链入口。
 3. 判定不读文件内容，同名不同义的文件只能靠文件名与用途描述区分。
-4. 命名校验留了钩子位（`runtime/place.js` 的 `validateTarget`），本版不启用任何规则。
+4. 命名校验只拦「跨平台不安全」的名字（分隔符、Windows 保留字符与设备名、结尾空格或点、超过 255 字节），不按项目自己的命名规范判对错。
 5. `fs.watch(recursive)` 在本版不启用；重启评估条件是差额占比连续两周高于 30%。
 
 ## 字段：用途与排除

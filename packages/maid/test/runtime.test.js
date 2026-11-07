@@ -4,10 +4,11 @@
  * @module file-maid/test/runtime
  */
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { nameViolations, place } from '../src/runtime/place.js';
 import { createRoots } from '../src/runtime/roots.js';
 import { snapshotFromIndex } from '../src/runtime/scan.js';
 import * as store from '../src/state/store.js';
@@ -207,4 +208,44 @@ test('R-32 the leak entry carries rich fields, and the projection strips them', 
   const projected = status.reconcile.missing.find((item) => item.path === '30-Media/clu.png');
   assert.deepEqual(Object.keys(projected).sort(), ['acknowledged', 'dir', 'path']);
   assert.equal(projected.acknowledged, false);
+});
+
+test('R-39 a name that only works on one platform is refused with a reason', () => {
+  const bad = {
+    'a/b.md': 'E_MAID_NAME_CHAR',
+    'a:b.md': 'E_MAID_NAME_CHAR',
+    'q?.md': 'E_MAID_NAME_CHAR',
+    'end.': 'E_MAID_NAME_TRAILING',
+    'end ': 'E_MAID_NAME_TRAILING',
+    CON: 'E_MAID_NAME_DEVICE',
+    'con.txt': 'E_MAID_NAME_DEVICE',
+    '': 'E_MAID_NAME_EMPTY',
+    '..': 'E_MAID_NAME_RESERVED',
+  };
+  for (const [name, code] of Object.entries(bad)) {
+    const violations = nameViolations(name);
+    assert.ok(violations.length > 0, `${name} must be refused`);
+    assert.ok(violations.some((item) => item.code === code), `${name} → ${code}`);
+    assert.ok(violations.every((item) => item.message.length > 0), 'every refusal explains itself');
+  }
+  for (const name of ['周报.md', '2026-11-07 会议记录.txt', '.hidden', 'conclusion.md', 'a.b.c.md']) {
+    assert.deepEqual(nameViolations(name), [], `${name} must pass`);
+  }
+});
+
+test('R-40 the naming refusal reaches the caller as a list', async (t) => {
+  const root = await makeRoot();
+  const roots = createRoots({ ctx: stubContext() });
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.ready(entry);
+  const placed = await place({ root, dir: '80-Outputs', name: 'a:b?.md', content: 'x' });
+  assert.equal(placed.ok, false);
+  assert.equal(placed.code, 'E_MAID_NAME_CHAR');
+  assert.ok(placed.violations.length >= 2, 'both bad characters are named');
+  assert.equal(await readdir(join(root, '80-Outputs')).then((list) => list.length).catch(() => 0), 0, 'nothing was written');
 });
