@@ -685,3 +685,17 @@ test('UI-80 the card says how many files it could not name', async () => {
   assert.match(body, /'scan\.unknownFiles': '另有 \{n\} 条无法判断/u);
   assert.match(body, /scanNote\('unknown'/u);
 });
+
+test('UI-81 no dictionary key outlives the feature that showed it', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const start = body.indexOf('const DICT = {');
+  const end = body.indexOf('\n    };', start);
+  assert.ok(start > 0 && end > start, 'the dictionary is where this test expects');
+  const dict = body.slice(start, end);
+  const keys = [...dict.matchAll(/^\s+'([a-zA-Z][\w.\-]*)':/gmu)].map((m) => m[1]);
+  const used = new Set([...body.matchAll(/\bt\('([^']+)'\)/gu)].map((m) => m[1]));
+  // `t(`state.${catalogState}`)` is the one call whose key is built at run time.
+  const dynamic = (key) => key.startsWith('state.');
+  const orphans = [...new Set(keys)].filter((key) => !used.has(key) && !dynamic(key));
+  assert.deepEqual(orphans, [], `keys nobody renders: ${orphans.join(', ')}`);
+});

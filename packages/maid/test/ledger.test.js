@@ -324,7 +324,6 @@ test('M-20 the scan endpoint answers with the reconciliation', async (t) => {
 test('UI-11 the scan page offers a rerun button and a blind-spot list', async () => {
   const body = await readFile(join(import.meta.dirname, '..', 'src', 'client.js'), 'utf8');
   assert.match(body, /'scan\.rerun': '重新扫描'/u);
-  assert.match(body, /'section\.missing': '漏网文件'/u);
   assert.match(body, /callRemote\('scan'/u);
   assert.match(body, /descriptorOf\('scan', \['root', 'sessionId', 'payload'\]\)/u, 'the card must mount the scan descriptor');
   assert.doesNotMatch(body, /'scanactions'/u, 'the action must not own a row of its own');
