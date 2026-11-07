@@ -64,7 +64,9 @@ export async function readWindow(root, stream, since) {
   }
   const rotated = Number.isFinite(floor) && Number.isFinite(rotatedAt) && rotatedAt >= floor;
   const bornLate = stream === 'writes' && Number.isFinite(floor) && Number.isFinite(birth) && birth > floor;
-  return { count, paths, earliest, birth, rotated, covered: !rotated && !bornLate };
+  // `rotatedAt` travels with the flag: records written after it cannot have been
+  // rotated away, so a caller may still name those even when the window has a hole.
+  return { count, paths, earliest, birth, rotated, rotatedAt: rotated ? rotatedAt : undefined, covered: !rotated && !bornLate };
 }
 
 /**

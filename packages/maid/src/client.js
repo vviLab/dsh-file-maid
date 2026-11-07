@@ -227,6 +227,7 @@ window.__ModuleLoader__.load({
         'scan.ledgerNote': '账本未覆盖本次窗口，只报数量',
         'scan.recordedIncomplete': '落点日志未覆盖',
         'scan.recordedNote': '本窗口内日志轮转过，清单不可靠，只报数量',
+        'scan.unknownFiles': '另有 {n} 条无法判断：它们写在日志轮转之前，那一段记账已经滚走了。',
         'scan.countMismatch': '这期间也有文件被删：净增按目录总数相减是 {net}，没记账的改动按文件算有 {n} 条，两个口径不同。',
         'scan.residualUnknown': '本窗口的日志没覆盖全，算不出这部分数量',
         'scan.factScope': '统计范围',
@@ -483,6 +484,7 @@ window.__ModuleLoader__.load({
         'scan.freshBaseline': 'First scan: the baseline is recorded now, so the next scan can show what is new.',
         'scan.noLeak': 'no unrecorded changes',
         'scan.leakCount': '{n} changes without a record',
+        'scan.unknownFiles': 'Another {n} cannot be judged: they predate a log rotation, and that slice of the record is gone.',
         'scan.countMismatch': 'Files were also deleted in this window: the net change is {net} while {n} changes have no record — the two count different things.',
         'scan.residual': '{n} more only show up in the total; they cannot be named',
         'scan.ledgerNote': 'the ledger does not cover this window; counts only',
@@ -2476,6 +2478,9 @@ window.__ModuleLoader__.load({
                   ? scanNote('residual', fill(t('scan.residual'), { n: reconcile.residual }))
                   : null,
                 ackBar,
+                Number.isFinite(reconcile.unknown_files) && reconcile.unknown_files > 0
+                  ? scanNote('unknown', fill(t('scan.unknownFiles'), { n: reconcile.unknown_files }))
+                  : null,
                 coverageLost || (missingBody.length === 0 && acceptedCount === 0)
                   ? null
                   : h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),

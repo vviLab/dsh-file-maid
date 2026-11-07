@@ -51,6 +51,7 @@ export async function measure(input) {
     truncated: result.candidatesTruncated,
     ledgerIncomplete: !ledgerWindow.covered,
     decisionsIncomplete: !decisionsWindow.covered,
+    decisionsRotatedAt: decisionsWindow.rotatedAt,
     acknowledged: ackSet(input.acks),
   });
   return {

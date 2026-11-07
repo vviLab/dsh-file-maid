@@ -271,3 +271,6 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | R-39 | R-39 a name that only works on one platform is refused with a reason | `runtime.test.js` |
 | R-40 | R-40 the naming refusal reaches the caller as a list | `runtime.test.js` |
 | UI-79 | UI-79 rules are listed and edited on the directory page | `ui.test.js` |
+| R-41 | R-41 a rotation names what came after it and counts the rest | `ack.test.js` |
+| R-42 | R-42 without a rotation instant the whole window stays a count | `ack.test.js` |
+| UI-80 | UI-80 the card says how many files it could not name | `ui.test.js` |

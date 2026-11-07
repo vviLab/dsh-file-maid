@@ -35,7 +35,7 @@ function totalOf(snapshot) {
  * `recordedIncomplete` and `ledgerIncomplete` are separate on purpose: a hole in
  * the decision log only corrupts `recorded`, a hole in the write ledger only
  * corrupts `ledger`, and one flag cannot describe both.
- * @param {{ before?: { dirs?: Record<string, number>, files?: number }, after: { dirs?: Record<string, number>, files?: number }, recorded: number, ledger?: number, candidates?: { path: string, dir: string, ctime?: number, size?: number, kind?: string }[], recordedPaths?: Set<string>, ledgerPaths?: Set<string>, acknowledged?: Set<string>, truncated?: boolean, ledgerIncomplete?: boolean, decisionsIncomplete?: boolean }} input - snapshots, channel counts, changed-file candidates, and the acknowledged keys (`path@ctime`).
+ * @param {{ before?: { dirs?: Record<string, number>, files?: number }, after: { dirs?: Record<string, number>, files?: number }, recorded: number, ledger?: number, candidates?: { path: string, dir: string, ctime?: number, size?: number, kind?: string }[], recordedPaths?: Set<string>, ledgerPaths?: Set<string>, acknowledged?: Set<string>, truncated?: boolean, ledgerIncomplete?: boolean, decisionsIncomplete?: boolean, decisionsRotatedAt?: number }} input - snapshots, channel counts, changed-file candidates, acknowledged keys (`path@ctime`), and where the decisions log rotated.
  * @returns {{ baseline: boolean, new_files: number, recorded: number, ledger: number, missing: { path: string, dir: string, ctime: number | null, size: number | null, kind: string }[], residual: number, gap: number, gap_ratio: number, top_dirs: { dir: string, added: number }[], truncated: boolean, ledger_incomplete: boolean, recorded_incomplete: boolean }} the reconciliation.
  */
 export function reconcile(input) {
@@ -85,6 +85,33 @@ export function reconcile(input) {
   // are unknowable: a channel record may name a file the other channel already
   // accounted for, so `residual` would silently absorb the difference. Return
   // null — "cannot be computed" — rather than a zero that reads as "all clear".
+  // A rotation inside the window hides records for everything written before it.
+  // Records after the rotation cannot have been rotated away, so that slice can
+  // still be named; only the earlier slice has to stay a count.
+  const canSplit = recordedIncomplete && !ledgerIncomplete && Number.isFinite(input.decisionsRotatedAt);
+  if (canSplit) {
+    const rotatedAt = Number(input.decisionsRotatedAt);
+    const evaluable = [];
+    let unknown = 0;
+    for (const candidate of input.candidates ?? []) {
+      const ctime = Number.isFinite(candidate?.ctime) ? Number(candidate.ctime) : 0;
+      if (ctime >= rotatedAt) evaluable.push(candidate);
+      else unknown += 1;
+    }
+    const inner = reconcile({ ...input, decisionsIncomplete: false, decisionsRotatedAt: undefined, candidates: evaluable });
+    const known = inner.missing_total;
+    return {
+      ...inner,
+      recorded_incomplete: true,
+      // The slice after the rotation is named; the earlier one is counted only.
+      unknown_files: unknown,
+      missing_total: known === null ? null : known + unknown,
+      residual: null,
+      gap: inner.gap === null ? null : inner.gap + unknown,
+      gap_ratio: null,
+    };
+  }
+
   if (ledgerIncomplete || recordedIncomplete) {
     return {
       baseline: false,
@@ -95,6 +122,7 @@ export function reconcile(input) {
       ledger_files: null,
       missing: [],
       acknowledged_files: null,
+      unknown_files: null,
       missing_total: null,
       residual: null,
       gap,
@@ -151,6 +179,7 @@ export function reconcile(input) {
     ledger_files: ledgerPaths.size,
     missing,
     acknowledged_files: acknowledgedFiles,
+    unknown_files: 0,
     missing_total: missingTotal,
     residual,
     gap,

@@ -683,3 +683,10 @@ test('UI-79 rules are listed and edited on the directory page', async () => {
   // And the count comes from the projection, not from a local guess.
   assert.match(body, /const rules = Array\.isArray\(catalog\?\.rules\)/u);
 });
+
+test('UI-80 the card says how many files it could not name', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /reconcile\.unknown_files > 0/u);
+  assert.match(body, /'scan\.unknownFiles': '另有 \{n\} 条无法判断/u);
+  assert.match(body, /scanNote\('unknown'/u);
+});

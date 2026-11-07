@@ -219,3 +219,39 @@ test('R-38 an undo brings the row back in the stored projection', async (t) => {
   assert.equal(status.reconcile.acknowledged_files, 0);
   assert.equal(status.reconcile.missing_total, 1);
 });
+
+test('R-41 a rotation names what came after it and counts the rest', () => {
+  const before = { dirs: { '80-Outputs': 0 }, files: 0 };
+  const after = { dirs: { '80-Outputs': 3 }, files: 3 };
+  const rotatedAt = 1000;
+  const candidates = [
+    { path: '80-Outputs/before.md', dir: '80-Outputs', ctime: 900 },
+    { path: '80-Outputs/after.md', dir: '80-Outputs', ctime: 1100 },
+  ];
+  const split = reconcile({
+    before,
+    after,
+    recorded: 0,
+    candidate: candidates,
+    candidates,
+    decisionsIncomplete: true,
+    decisionsRotatedAt: rotatedAt,
+  });
+  // Only the file written after the rotation can be named: the earlier one might have
+  // been recorded in the rotated file, and guessing there is how a list lies.
+  assert.deepEqual(split.missing.map((item) => item.path), ['80-Outputs/after.md']);
+  assert.equal(split.unknown_files, 1);
+  assert.equal(split.residual, null, 'the residual stays unknowable');
+});
+
+test('R-42 without a rotation instant the whole window stays a count', () => {
+  const result = reconcile({
+    before: { dirs: { '80-Outputs': 0 }, files: 0 },
+    after: { dirs: { '80-Outputs': 2 }, files: 2 },
+    recorded: 0,
+    candidates: [{ path: '80-Outputs/a.md', dir: '80-Outputs', ctime: 900 }],
+    decisionsIncomplete: true,
+  });
+  assert.deepEqual(result.missing, []);
+  assert.equal(result.unknown_files, null);
+});

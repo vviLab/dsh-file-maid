@@ -332,6 +332,7 @@ export function createRoots(options) {
         ledger_files: reconciliation.ledger_files,
         missing: reconciliation.missing.length,
         acknowledged_files: reconciliation.acknowledged_files,
+        unknown_files: reconciliation.unknown_files ?? 0,
         missing_total: reconciliation.missing_total,
         residual: reconciliation.residual,
       },
@@ -371,6 +372,7 @@ export function createRoots(options) {
       : {
           ...reconciliation,
           missing: (reconciliation.missing ?? []).map((item) => ({ path: item.path, dir: item.dir, acknowledged: item.acknowledged === true })),
+        unknown_files: reconciliation.unknown_files ?? 0,
         };
     const document = {
       schemaVersion: '2',

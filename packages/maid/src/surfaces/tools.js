@@ -125,6 +125,7 @@ export function exportDocument(input) {
       ledger_files: reconcile.ledger_files ?? null,
       missing: Array.isArray(reconcile.missing) ? reconcile.missing.length : null,
       acknowledged_files: reconcile.acknowledged_files ?? null,
+      unknown_files: reconcile.unknown_files ?? null,
       missing_total: reconcile.missing_total ?? null,
       residual: reconcile.residual ?? null,
     },
