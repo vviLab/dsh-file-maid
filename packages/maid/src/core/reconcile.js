@@ -35,7 +35,7 @@ function totalOf(snapshot) {
  * `recordedIncomplete` and `ledgerIncomplete` are separate on purpose: a hole in
  * the decision log only corrupts `recorded`, a hole in the write ledger only
  * corrupts `ledger`, and one flag cannot describe both.
- * @param {{ before?: { dirs?: Record<string, number>, files?: number }, after: { dirs?: Record<string, number>, files?: number }, recorded: number, ledger?: number, candidates?: { path: string, dir: string, ctime?: number, size?: number, kind?: string }[], recordedPaths?: Set<string>, ledgerPaths?: Set<string>, acknowledged?: Set<string>, truncated?: boolean, ledgerIncomplete?: boolean, decisionsIncomplete?: boolean, decisionsRotatedAt?: number }} input - snapshots, channel counts, changed-file candidates, acknowledged keys (`path@ctime`), and where the decisions log rotated.
+ * @param {{ before?: { dirs?: Record<string, number>, files?: number }, after: { dirs?: Record<string, number>, files?: number }, recorded: number, ledger?: number, candidates?: { path: string, dir: string, ctime?: number, mtime?: number, size?: number, kind?: string }[], recordedPaths?: Set<string>, ledgerPaths?: Set<string>, acknowledged?: Set<string>, truncated?: boolean, ledgerIncomplete?: boolean, decisionsIncomplete?: boolean, decisionsRotatedAt?: number }} input - snapshots, channel counts, changed-file candidates, acknowledged keys (`path@ctime`), and where the decisions log rotated.
  * @returns {{ baseline: boolean, new_files: number, recorded: number, ledger: number, missing: { path: string, dir: string, ctime: number | null, size: number | null, kind: string }[], residual: number, gap: number, gap_ratio: number, top_dirs: { dir: string, added: number }[], truncated: boolean, ledger_incomplete: boolean, recorded_incomplete: boolean }} the reconciliation.
  */
 export function reconcile(input) {
@@ -160,6 +160,7 @@ export function reconcile(input) {
       path,
       dir: typeof candidate?.dir === 'string' ? candidate.dir : '',
       ctime,
+      mtime: Number.isFinite(candidate?.mtime) ? candidate.mtime : null,
       size: Number.isFinite(candidate?.size) ? candidate.size : null,
       kind: typeof candidate?.kind === 'string' ? candidate.kind : 'file',
     });

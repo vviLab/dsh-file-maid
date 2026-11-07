@@ -625,3 +625,33 @@ test('EX-06 a CLI scan only moves the baseline when asked', async (t) => {
   assert.deepEqual(Object.keys(after.roots).sort(), ['00-Specs', '10-Projects', '30-Media', '80-Outputs']);
   assert.equal(after.roots['30-Media'].files, 1);
 });
+
+test('R-44 a leak carries both clocks, so a rename is distinguishable from a write', async (t) => {
+  const root = await makeRoot();
+  const { ctx, registered } = stubContext();
+  const roots = createRoots({ ctx });
+  const tools = createTools({ ctx, roots });
+  tools.register();
+  const agent = makeAgent(root);
+  const { entry } = await seed(roots, agent);
+  t.after(async () => {
+    roots.disposeAll();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+  });
+  await roots.scan(entry, 'test');
+  const file = join(root, '80-Outputs', 'written.md');
+  await writeFile(file, 'x');
+  // A rename inside the window: the inode clock moves, the content clock does not.
+  const before = (await import('node:fs/promises')).stat(file);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await (await import('node:fs/promises')).rename(file, join(root, '80-Outputs', 'renamed.md'));
+
+  const result = await tool(registered, 'maid_review').execute({}, exec(agent));
+  const leak = result.data.missing.find((item) => item.path === '80-Outputs/renamed.md');
+  assert.ok(leak !== undefined, 'the renamed file is a candidate');
+  assert.ok(Number.isFinite(leak.ctime));
+  assert.ok(Number.isFinite(leak.mtime));
+  const original = await before;
+  assert.equal(leak.mtime, Math.round(original.mtimeMs), 'the content clock is unchanged by a rename');
+  assert.ok(leak.ctime > leak.mtime, 'only the inode clock moved');
+});

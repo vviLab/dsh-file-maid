@@ -213,7 +213,8 @@ window.__ModuleLoader__.load({
         'scan.export': '扫描时同时导出清单',
         'scan.exportReadonly': '只读会话不能写导出文件。',
         'k.pathFull': '完整路径',
-        'k.ctime': '变更时间',
+        'k.ctime': '被动过',
+        'k.mtime': '内容改于',
         'k.owner': '归属目录',
         'kind.file': '文件',
         'kind.dir': '文件夹',
@@ -474,7 +475,8 @@ window.__ModuleLoader__.load({
         'scan.export': 'Also export the list when scanning',
         'scan.exportReadonly': 'Read-only session: nothing can be exported.',
         'k.pathFull': 'full path',
-        'k.ctime': 'changed',
+        'k.ctime': 'touched',
+        'k.mtime': 'content changed',
         'k.owner': 'filed under',
         'kind.file': 'file',
         'kind.dir': 'folder',
@@ -2347,6 +2349,11 @@ window.__ModuleLoader__.load({
                         { 'data-file-maid': 'missdetail', id: `leak-detail-${item.path}` },
                         factLine(t('k.pathFull'), item.path, 'path'),
                         factLine(t('k.ctime'), formatClock(new Date(item.ctime).toISOString(), now), 'ctime'),
+                        // The two clocks side by side: "touched" is not "changed", and a
+                        // reader who sees the bytes are old can tell a rename from a write.
+                        item.mtime === null || item.mtime === undefined
+                          ? null
+                          : factLine(t('k.mtime'), formatClock(new Date(item.mtime).toISOString(), now), 'mtime'),
                         factLine(t('k.owner'), item.dir, 'owner'),
                         readonly ? h('div', { 'data-file-maid': 'scannote', id: 'leak-readonly' }, t('scan.ackReadonly')) : null,
                         h(

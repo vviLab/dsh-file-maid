@@ -25,7 +25,7 @@ export const CANDIDATE_LIMIT = 500;
  * reconciliation report phantom additions, so files are deduplicated by their
  * absolute path and attributed to the shallowest declaration.
  * @param {{ root: string, catalog: object, signal?: AbortSignal, now?: () => number, since?: number }} input - scan inputs; `since` asks for files whose ctime is at or after that epoch millisecond.
- * @returns {Promise<{ sections: Record<string, { files: number }>, files: number, dirs: number, elapsed: number, degraded: boolean, candidates: { path: string, dir: string, ctime: number }[], candidatesTruncated: boolean }>} the snapshot.
+ * @returns {Promise<{ sections: Record<string, { files: number }>, files: number, dirs: number, elapsed: number, degraded: boolean, candidates: { path: string, dir: string, ctime: number, mtime: number | null, size: number | null, kind: string }[], candidatesTruncated: boolean }>} the snapshot.
  */
 export async function scanManaged(input) {
   const now = input.now ?? Date.now;
@@ -74,6 +74,10 @@ export async function scanManaged(input) {
           path: `${dir.path}/${relative}`,
           dir: dir.path,
           ctime: meta.ctime,
+          // The content clock travels with the inode clock: `ctime` says "something
+          // touched this", `mtime` says "the bytes changed". Only together can a
+          // reader tell a rename from a write.
+          mtime: Number.isFinite(meta?.mtime) ? meta.mtime : null,
           size: Number.isFinite(meta?.size) ? meta.size : null,
           kind: typeof meta?.kind === 'string' ? meta.kind : 'file',
         });
