@@ -343,10 +343,14 @@ test('RD-06 the directory rows, the table rows and the ledger all render with da
   assert.ok(texts.some((value) => value.includes('00-Specs')), 'the directory names reached the output');
 });
 
-test('RD-07 switching to the scan page renders its accounts from the snapshot', async () => {
+test('RD-07 switching to the scan page renders the verdict and the three counts', async () => {
   const { texts, hooks } = await mount({ page: 'scan' });
-  assert.ok(texts.some((value) => value.includes('41')), 'the file count from the snapshot is shown');
-  assert.ok(hooks.has('scangroup'), 'the scan page built its groups');
+  assert.ok(hooks.has('verdictband'), 'the answer band is the first thing on the page');
+  assert.ok(hooks.has('verdicttext'), 'it carries a sentence, not a category name');
+  assert.ok(hooks.has('scansentence'), 'the period opens with a spoken sentence');
+  assert.ok(texts.some((value) => value.includes('3')), 'the new-file count from the snapshot is shown');
+  // The scan cost is folded away: it answers a question the reader did not ask.
+  assert.equal(hooks.has('costline'), false, 'cost stays closed until asked');
 });
 
 test('RD-08 the scan page builds the rich leak rows from the review reply', async () => {
@@ -358,3 +362,4 @@ test('RD-08 the scan page builds the rich leak rows from the review reply', asyn
   assert.ok(texts.some((value) => value.includes('1.2 MB')), 'the size column shows a human number');
   assert.ok(texts.some((value) => value.includes('漏网.md')), 'the name is shown, not the whole path');
 });
+

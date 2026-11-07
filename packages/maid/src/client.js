@@ -155,8 +155,8 @@ window.__ModuleLoader__.load({
         'label.uninitialized': '还没启用。点下面的「启用这个根」建好目录表。',
         'label.default': '没命中时放这里',
         'label.scan': '最近扫描',
+        'label.baseline': '首次记录',
         'label.threshold': '阈值',
-        'label.baseline': '基线快照',
         'col.dir': '目录',
         'col.files': '文件',
         'col.about': '用途',
@@ -164,33 +164,41 @@ window.__ModuleLoader__.load({
         'view.dirs': '目录',
         'view.misplaced': '日志',
         'view.scan': '扫描',
-        'k.durationMs': '耗时',
-        'k.files': '文件',
-        'k.dirs': '目录',
-        'k.newFiles': '净增文件',
-        'k.recorded': '经 maid_put',
+        'verdict.never': '还没看过这个工作区',
+        'verdict.baseline': '刚记下现在的样子',
+        'verdict.unknown': '查过了，但记录不全',
+        'verdict.leak': '{n} 个文件没走妹抖，等你确认',
+        'verdict.clean': '没有文件绕过妹抖',
+        'scan.never': '还没扫过',
+        'scan.checked': '{age}查过',
+        'scan.newLine': '这段时间新来了 {n} 个文件。',
+        'scan.recordsIncomplete': '记录不全',
+        'scan.leakTitle': '这 {n} 个文件没走妹抖',
+        'scan.costLine': '读了 {files} 个文件、{dirs} 个文件夹，用时 {ms} 毫秒',
+        'section.who': '这段时间新来的文件，是谁放进来的',
+        'section.cost': '这次扫描花了多少',
+        'k.byMaid': '妹抖安排的',
+        'k.byTools': '其他工具写的',
+        'k.onTheirOwn': '自己进来的',
         'section.catalog': '目录表',
         'section.misplaced': '最近落点',
-        'section.scan': '本次扫描',
-        'section.reconcile': '新增文件去哪了',
-        'scan.rerun': '重新扫描',
-        'scan.rerunArm': '再点一次·会重算基线',
-        'scan.rerunWarn': '重新扫描会从此刻重新算起，下面 {n} 条没被记账的改动会并入基线、不再列出。',
+        'scan.rerun': '重新扫一次',
+        'scan.rerunArm': '再点一次：从现在重新算',
+        'scan.rerunWarn': '再扫一次就从现在重新算：这 {n} 个还没确认的文件会算进去，以后不再提醒。',
         'scan.running': '扫描中…',
         'scan.failed': '扫描没有完成，稍后再试。',
         'scan.more': '还有 {n} 个',
-        'scan.ledgerIncomplete': '账本未覆盖',
-        'scan.ack': '这条我认了',
-        'scan.ackUndo': '撤销',
-        'scan.ackDone': '已确认「{name}」',
-        'scan.ackCount': '已确认 {n} 条',
+        'scan.ack': '这条我知道',
+        'scan.ackUndo': '撤销确认',
+        'scan.ackDone': '记下了：{name}',
+        'scan.ackCount': '已确认 {n} 个',
         'scan.ackFailed': '确认没有保存，稍后再试。',
-        'scan.ackReadonly': '只读会话：漏网条目不能确认。',
+        'scan.ackReadonly': '这次会话不能改文件，确认也没法保存。',
         'scan.reviewLoading': '正在读取体积与变更时间…',
-        'scan.reviewFailed': '详情没有读到，只显示路径，暂时不能确认。',
+        'scan.reviewFailed': '只读到路径，先看看是哪个。',
         'scan.showAll': '展开 {n} 条',
         'scan.truncatedNote': '清单到 {n} 条上限，只保留最新的。',
-        'scan.export': '扫描时同时导出清单',
+        'scan.export': '每次扫描顺便存一份清单',
         'scan.exportReadonly': '只读会话不能写导出文件。',
         'k.pathFull': '完整路径',
         'k.ctime': '被动过',
@@ -199,22 +207,18 @@ window.__ModuleLoader__.load({
         'kind.dir': '文件夹',
         'kind.link': '符号链接',
         'kind.other': '其他',
-        'scan.scanNow': '立即扫描',
-        'scan.freshBaseline': '这是第一次扫描，已记下基线；下次扫描才能看出新增与漏网。',
-        'scan.noLeak': '没有未记账的改动',
-        'scan.leakCount': '{n} 个改动没被记账',
-        'scan.residual': '另有 {n} 个文件只体现在总数变化里，点不出名字',
+        'scan.scanNow': '现在看一次',
+        'scan.freshBaseline': '第一次看，先记下现在的样子；下次才能比出谁新放了文件。',
+        'scan.noLeak': '没有文件绕过妹抖',
+        'scan.residual': '还有 {n} 个文件只能看到数量，说不出是哪个。',
         'scan.ledgerNote': '账本未覆盖本次窗口，只报数量',
-        'scan.recordedIncomplete': '落点日志未覆盖',
         'scan.recordedNote': '本窗口内日志轮转过，清单不可靠，只报数量',
         'scan.unknownFiles': '另有 {n} 条无法判断：它们写在日志轮转之前，那一段记账已经滚走了。',
         'scan.countMismatch': '这期间也有文件被删：净增按目录总数相减是 {net}，没记账的改动按文件算有 {n} 条，两个口径不同。',
-        'scan.residualUnknown': '本窗口的日志没覆盖全，算不出这部分数量',
-        'k.ledger': '经工具写盘',
-        'scan.degraded': '扫描较慢',
-        'scan.degradedNone': '正常',
-        'scan.empty': '没有扫描记录',
-        'scan.emptyHint': '会话进入工作区时会在后台统计一次，几秒后这里出现结果；也可以让我重新扫描。',
+        'scan.residualUnknown': '这段时间的记录不全，这部分数量算不出来。',
+        'scan.degraded': '这次扫描偏慢',
+        'scan.empty': '还没看过这个工作区',
+        'scan.emptyHint': '第一次看会先记下现在的样子，之后才知道谁新放了文件。',
         'detail.excludes': '排除：',
         'detail.excludesLabel': '排除',
         'detail.misplaced': '路由指向本目录',
@@ -338,7 +342,7 @@ window.__ModuleLoader__.load({
         'label.default': 'default',
         'label.scan': 'last scan',
         'label.threshold': 'threshold',
-        'label.baseline': 'baseline',
+        'label.baseline': 'first record',
         'col.dir': 'dir',
         'col.files': 'files',
         'col.about': 'purpose',
@@ -346,21 +350,31 @@ window.__ModuleLoader__.load({
         'view.dirs': 'Directories',
         'view.misplaced': 'Log',
         'view.scan': 'Scan',
-        'k.durationMs': 'duration',
-        'k.files': 'files',
-        'k.dirs': 'dirs',
+        'verdict.never': 'Not looked at yet',
+        'verdict.baseline': 'Current state recorded',
+        'verdict.unknown': 'Checked, but the records are incomplete',
+        'verdict.leak': '{n} files did not go through File Maid',
+        'verdict.clean': 'Nothing slipped past File Maid',
+        'scan.never': 'never scanned',
+        'scan.checked': 'checked {age}',
+        'scan.newLine': '{n} new files arrived in this period.',
+        'scan.recordsIncomplete': 'records incomplete',
+        'scan.leakTitle': '{n} files did not go through File Maid',
+        'scan.costLine': 'Read {files} files and {dirs} folders in {ms} ms',
+        'section.who': 'Who put these new files here',
+        'section.cost': 'What this scan cost',
+        'k.byMaid': 'placed by File Maid',
+        'k.byTools': 'written by other tools',
+        'k.onTheirOwn': 'arrived on their own',
         'section.catalog': 'Catalog',
         'section.misplaced': 'Recent decisions',
-        'section.scan': 'This scan',
-        'section.reconcile': 'Where new files went',
         'scan.rerun': 'Scan now',
-        'scan.rerunArm': 'Click again: this rebaselines',
-        'scan.rerunWarn': 'Scanning restarts the window; the {n} unrecorded changes below become part of the baseline and stop being listed.',
+        'scan.rerunArm': 'Click again: restart the count',
+        'scan.rerunWarn': 'Rescanning restarts the count: these {n} unconfirmed files are absorbed and will not be listed again.',
         'scan.running': 'Scanning…',
         'scan.failed': 'The scan did not finish; try again shortly.',
         'scan.more': '{n} more',
-        'scan.ledgerIncomplete': 'ledger does not cover this window',
-        'scan.ack': "I'll accept this one",
+        'scan.ack': 'Got it',
         'scan.ackUndo': 'Undo',
         'scan.ackDone': 'Accepted "{name}"',
         'scan.ackCount': '{n} accepted',
@@ -379,22 +393,16 @@ window.__ModuleLoader__.load({
         'kind.dir': 'folder',
         'kind.link': 'symlink',
         'kind.other': 'other',
-        'scan.scanNow': 'Scan now',
+        'scan.scanNow': 'Look now',
         'scan.freshBaseline': 'First scan: the baseline is recorded now, so the next scan can show what is new.',
         'scan.noLeak': 'no unrecorded changes',
-        'scan.leakCount': '{n} changes without a record',
         'scan.unknownFiles': 'Another {n} cannot be judged: they predate a log rotation, and that slice of the record is gone.',
         'scan.countMismatch': 'Files were also deleted in this window: the net change is {net} while {n} changes have no record — the two count different things.',
         'scan.residual': '{n} more only show up in the total; they cannot be named',
         'scan.ledgerNote': 'the ledger does not cover this window; counts only',
-        'scan.recordedIncomplete': 'decision log rotated',
         'scan.recordedNote': 'the log rotated inside this window, so the list is unreliable; counts only',
         'scan.residualUnknown': 'this window has a coverage gap, so the remainder cannot be computed',
-        'k.newFiles': 'new files',
-        'k.recorded': 'via plugin',
-        'k.ledger': 'Ledger',
         'scan.degraded': 'slow scan',
-        'scan.degradedNone': 'normal',
         'scan.empty': 'no scan yet',
         'scan.emptyHint': 'A session counts this workspace in the background as it starts, so numbers appear within seconds.',
         'detail.excludes': 'Excludes:',
@@ -1060,9 +1068,19 @@ window.__ModuleLoader__.load({
             '[data-file-maid="scanact"][aria-busy="true"]{opacity:.55;cursor:progress;}',
             '[data-file-maid="morebar"]{min-height:24px;}',
             '[data-file-maid="emptystate"] [data-file-maid="scanact"]{min-height:28px;padding:0 12px;}',
-            '[data-file-maid="scanstatus"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
-            '[data-file-maid="scanverdict"][data-tone="warn"]{padding-left:6px;border-left:2px solid var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-label-primary);}',
-            '[data-file-maid="scanaside"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
+            '[data-file-maid="verdictband"]{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 0 6px;border-bottom:1px solid var(--dsw-alias-border-l1);}',
+            '[data-file-maid="verdictline"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;}',
+            '[data-file-maid="verdicttext"]{flex:1;min-width:0;font-size:var(--maid-fs-body);font-weight:600;line-height:1.3;overflow-wrap:anywhere;}',
+            '[data-file-maid="verdicttext"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
+            '[data-file-maid="verdictmeta"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="scanverdict"]{font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="scanverdict"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
+            '[data-file-maid="scansentence"]{font-size:var(--maid-fs-body);line-height:1.4;padding:2px 0 4px;}',
+            '[data-file-maid="costtoggle"]{display:flex;align-items:center;gap:4px;min-height:22px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
+            '[data-file-maid="costtoggle"]::before{content:"▸";font-size:var(--maid-fs-meta);line-height:1;}',
+            '[data-file-maid="scangroup"][data-open="true"] [data-file-maid="costtoggle"]::before{content:"▾";}',
+            '[data-file-maid="costbody"]{display:flex;flex-direction:column;gap:2px;padding-top:2px;}',
+            '[data-file-maid="costline"]{font-size:var(--maid-fs-meta);line-height:1.4;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scannote"]{margin-top:4px;font-size:var(--maid-fs-meta);line-height:1.4;min-height:15px;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanrows"]{display:flex;flex-direction:column;margin-top:0;min-width:0;}',
             '[data-file-maid="missrow"]{min-width:0;padding:3px 0;border-top:1px solid var(--dsw-alias-border-l1);}',
@@ -1236,6 +1254,8 @@ window.__ModuleLoader__.load({
           const [ackNotice, setAckNotice] = React.useState('');
           const [openLeak, setOpenLeak] = React.useState('');
           const [openAcked, setOpenAcked] = React.useState(false);
+          /** The cost fold: closed by default, because it answers a question nobody asked. */
+          const [openCost, setOpenCost] = React.useState(false);
           const [exportWanted, setExportWanted] = React.useState(false);
           const [state, setState] = React.useState({ phase: 'loading', status: undefined, message: '', forReader: '' });
           const [openDir, setOpenDir] = React.useState('');
@@ -2016,60 +2036,18 @@ window.__ModuleLoader__.load({
               block,
             );
 
-          const scannedAt = typeof scan?.scannedAt === 'string' ? scan.scannedAt : '';
+          // Older snapshots used `at`; newer ones `scannedAt`. Accept both.
+          const scannedAt = typeof scan?.scannedAt === 'string' ? scan.scannedAt : typeof scan?.at === 'string' ? scan.at : '';
           const reported = Number.isFinite(reconcile?.missing?.length) ? reconcile.missing.length : 0;
           const ledgerGap = reconcile?.ledger_incomplete === true;
           const decisionsGap = reconcile?.recorded_incomplete === true;
           const coverageLost = ledgerGap || decisionsGap;
 
-          /**
-           * The verdict on the right of the "本次扫描" head. Reading the scan and
-           * re-running it belong together, so the action sits on the same line as the
-           * numbers it produces instead of owning a row above them.
-           */
           React.useEffect(() => {
             if (!scanArmed) return undefined;
             const timer = setTimeout(() => setScanArmed(false), 4000);
             return () => clearTimeout(timer);
           }, [scanArmed]);
-
-          const scanAction = h(
-            'button',
-            {
-              type: 'button',
-              'data-file-maid': 'scanact',
-              'data-tone': 'brand',
-              'aria-busy': scanBusy ? 'true' : 'false',
-              onClick: () => {
-                if (scanBusy) return;
-                // Rescanning moves the window to now, which swallows every leak found so
-                // far. Ask for the second click while there is something to lose.
-                if (reportCount > 0 && !scanArmed) {
-                  setScanArmed(true);
-                  return;
-                }
-                setScanArmed(false);
-                void runScan();
-              },
-            },
-            scanBusy ? t('scan.running') : scanArmed ? t('scan.rerunArm') : t('scan.rerun'),
-          );
-
-          /** Time, age and the one state word, on one line: they answer the same question. */
-          const scanStatus = h(
-            'div',
-            { 'data-file-maid': 'scanstatus', 'aria-live': 'polite' },
-            h(
-              'span',
-              { 'data-file-maid': 'scanage' },
-              `${scannedAt === '' ? '—' : `${formatClock(scannedAt, now)} · ${formatAge(scannedAt, t, now)}`}`,
-            ),
-            h(
-              'span',
-              { 'data-file-maid': 'scanverdict', 'data-tone': scan?.degraded === true ? 'warn' : undefined },
-              scan?.degraded === true ? t('scan.degraded') : t('scan.degradedNone'),
-            ),
-          );
 
           /** A grey line under the figures: explains a gap the numbers alone cannot. */
           const scanNote = (key, text) => h('div', { key, 'data-file-maid': 'scannote' }, text);
@@ -2080,19 +2058,6 @@ window.__ModuleLoader__.load({
             return Number.isFinite(value) ? String(value) : '—';
           };
           const baselineOnly = reconcile === undefined || reconcile === null || reconcile.baseline === true;
-          const reconcileAside = baselineOnly
-            ? null
-            : h(
-                'span',
-                { 'data-file-maid': 'scanaside', 'data-tone': coverageLost || reported > 0 ? 'warn' : undefined },
-                coverageLost
-                  ? decisionsGap
-                    ? t('scan.recordedIncomplete')
-                    : t('scan.ledgerIncomplete')
-                  : reported > 0
-                    ? fill(t('scan.leakCount'), { n: reported })
-                    : t('scan.noLeak'),
-              );
 
           // The projection keeps accepted rows with a flag, so an undo can bring the
           // row back without another scan; the list shows only the open ones.
@@ -2106,6 +2071,7 @@ window.__ModuleLoader__.load({
             if (review.key === reviewKey && review.phase !== 'failed') return;
             void loadReview(reviewKey);
           }, [view, reviewKey, reportCount, acceptedCount]);
+
           /** The list shown before the rich reply lands: paths only, newest first. */
           const missingRows = openLeaks.slice(0, 5);
           /** The rich reply, once it lands: name, owner, size, and the confirmation. */
@@ -2114,7 +2080,6 @@ window.__ModuleLoader__.load({
           const readonly = rich?.readOnly === true;
           const ledgerRows = rich === null ? [] : (rich.missing ?? []).filter((item) => !ackedLocal.includes(`${item.path}@${item.ctime}`));
           const shown = rich === null ? missingRows.length : Math.min(5, ledgerRows.length);
-          if (typeof console !== 'undefined' && rich !== null) console.error('DBG ok', JSON.stringify(rich.missing));
           /** One compact fact line inside an opened row. */
           const factLine = (label, value, key) =>
             h(
@@ -2273,23 +2238,96 @@ window.__ModuleLoader__.load({
               )
             : null;
 
-          const reconcileBody = baselineOnly
+          // ── ① 结论带 ────────────────────────────────────────────────────────
+          // The page answers one question: did anything slip in since last time? The
+          // answer goes first, at the top, in one sentence — the counts below are the
+          // evidence, not the headline.
+          const scanAction = h(
+            'button',
+            {
+              type: 'button',
+              'data-file-maid': 'scanact',
+              'data-tone': 'brand',
+              'aria-busy': scanBusy ? 'true' : 'false',
+              onClick: () => {
+                if (scanBusy) return;
+                // Rescanning moves the window to now, which swallows every leak found so
+                // far. Ask for the second click while there is something to lose.
+                if (reportCount > 0 && !scanArmed) {
+                  setScanArmed(true);
+                  return;
+                }
+                setScanArmed(false);
+                void runScan();
+              },
+            },
+            scanBusy ? t('scan.running') : scanArmed ? t('scan.rerunArm') : t('scan.rerun'),
+          );
+
+          const verdictText = baselineOnly
+            ? scannedAt === ''
+              ? t('verdict.never')
+              : t('verdict.baseline')
+            : coverageLost
+              ? t('verdict.unknown')
+              : reportCount > 0
+                ? fill(t('verdict.leak'), { n: reportCount })
+                : t('verdict.clean');
+          const verdictTone = reportCount > 0 || coverageLost ? 'warn' : undefined;
+          const scanAge = scannedAt === '' ? '' : formatAge(scannedAt, t, now);
+
+          const verdictBand = h(
+            'div',
+            { 'data-file-maid': 'verdictband' },
+            h(
+              'div',
+              { 'data-file-maid': 'verdictline' },
+              h('span', { 'data-file-maid': 'verdicttext', 'data-tone': verdictTone }, verdictText),
+              scanAction,
+            ),
+            h(
+              'div',
+              { 'data-file-maid': 'verdictmeta' },
+              h('span', { 'data-file-maid': 'scanage' }, scanAge === '' ? t('scan.never') : fill(t('scan.checked'), { age: scanAge })),
+              h(
+                'span',
+                { 'data-file-maid': 'scanverdict', 'data-tone': scan?.degraded === true ? 'warn' : undefined },
+                scan?.degraded === true ? t('scan.degraded') : '',
+              ),
+            ),
+            scanArmed && reportCount > 0
+              ? h(
+                  'div',
+                  { 'data-file-maid': 'scannote', 'data-tone': 'warn', 'aria-live': 'polite' },
+                  fill(t('scan.rerunWarn'), { n: reportCount }),
+                )
+              : null,
+          );
+
+          // ── ② 谁放进来的 ────────────────────────────────────────────────────
+          // Three counts that add up: everything that appeared in this period was put
+          // there by the plugin, written by some other tool, or arrived on its own.
+          const whoBody = baselineOnly
             ? scanNote('fresh', t('scan.freshBaseline'))
             : h(
                 React.Fragment,
                 null,
+                h('div', { 'data-file-maid': 'scansentence' }, fill(t('scan.newLine'), { n: num(reconcile.new_files) })),
                 h(
                   'div',
                   { 'data-file-maid': 'scanstat' },
-                  scanStat('newFiles', num(reconcile.new_files), t('k.newFiles')),
-                  scanStat('recorded', num(reconcile.recorded_files, reconcile.recorded), t('k.recorded')),
-                  scanStat('ledger', num(reconcile.ledger_files, reconcile.ledger), t('k.ledger')),
+                  scanStat('recorded', num(reconcile.recorded_files, reconcile.recorded), t('k.byMaid')),
+                  scanStat('ledger', num(reconcile.ledger_files, reconcile.ledger), t('k.byTools')),
+                  scanStat('leaks', num(reconcile.missing_total), t('k.onTheirOwn')),
                 ),
                 coverageLost
                   ? scanNote('ledgernote', decisionsGap ? t('scan.recordedNote') : t('scan.ledgerNote'))
                   : null,
-                // The three cells are net counts; the leak list is per changed inode. A
-                // window where one file was deleted and another added shows 0 next to 1,
+                !coverageLost && Number.isFinite(reconcile.unknown_files) && reconcile.unknown_files > 0
+                  ? scanNote('unknown', fill(t('scan.unknownFiles'), { n: reconcile.unknown_files }))
+                  : null,
+                // Net counts are per directory; the leak list is per changed inode. A
+                // period where one file was deleted and another added shows 0 next to 1,
                 // and both numbers are right — say so instead of letting them argue.
                 Number.isFinite(reconcile.missing_total) && Number.isFinite(reconcile.new_files) && reconcile.missing_total > reconcile.new_files
                   ? scanNote('mismatch', fill(t('scan.countMismatch'), { net: reconcile.new_files, n: reconcile.missing_total }))
@@ -2297,17 +2335,87 @@ window.__ModuleLoader__.load({
                 reconcile.residual === null && reconcile.baseline !== true
                   ? scanNote('residual', t('scan.residualUnknown'))
                   : !coverageLost && Number.isFinite(reconcile.residual) && reconcile.residual > 0
-                  ? scanNote('residual', fill(t('scan.residual'), { n: reconcile.residual }))
-                  : null,
-                ackBar,
-                Number.isFinite(reconcile.unknown_files) && reconcile.unknown_files > 0
-                  ? scanNote('unknown', fill(t('scan.unknownFiles'), { n: reconcile.unknown_files }))
-                  : null,
-                coverageLost || (missingBody.length === 0 && acceptedCount === 0)
-                  ? null
-                  : h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
-                ackedBlock,
+                    ? scanNote('residual', fill(t('scan.residual'), { n: reconcile.residual }))
+                    : null,
               );
+          const whoAside = baselineOnly
+            ? null
+            : coverageLost
+              ? t('scan.recordsIncomplete')
+              : reportCount > 0
+                ? null
+                : t('scan.noLeak');
+
+          // ── ③ 需要你看的文件 ────────────────────────────────────────────────
+          const leakBody = h(
+            React.Fragment,
+            null,
+            ackBar,
+            h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
+            ackedBlock,
+          );
+          const leakGroup =
+            coverageLost || (reportCount === 0 && acceptedCount === 0)
+              ? null
+              : scanGroup('leaks', fill(t('scan.leakTitle'), { n: reportCount }), leakBody, null);
+
+          // ── ④ 这次扫描花了多少 ──────────────────────────────────────────────
+          // Cost, not value: it answers "is this slow?" and nothing else, so it sits
+          // folded at the bottom unless the reader asks.
+          const costBody = h(
+            React.Fragment,
+            null,
+            h(
+              'div',
+              { 'data-file-maid': 'costline' },
+              fill(t('scan.costLine'), {
+                files: scanCount(scan?.files),
+                dirs: scanCount(scan?.dirs),
+                ms: Number.isFinite(scan?.durationMs) ? scan.durationMs : '—',
+              }),
+            ),
+            h(
+              'label',
+              { 'data-file-maid': 'exportrow' },
+              h('input', {
+                type: 'checkbox',
+                checked: exportWanted,
+                disabled: readonly,
+                'aria-describedby': readonly ? 'export-readonly' : undefined,
+                onChange: (event) => {
+                  const next = event.target.checked;
+                  setExportWanted(next);
+                  try {
+                    window.localStorage.setItem(exportKey, next ? '1' : '0');
+                  } catch {
+                    /* a browser without storage still gets the checkbox */
+                  }
+                },
+              }),
+              h('span', null, t('scan.export')),
+            ),
+            readonly ? h('div', { 'data-file-maid': 'scannote', id: 'export-readonly' }, t('scan.exportReadonly')) : null,
+          );
+          const costGroup = h(
+            'div',
+            { 'data-file-maid': 'scangroup', 'data-open': openCost ? 'true' : 'false' },
+            h(
+              'div',
+              { 'data-file-maid': 'sectionhead' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  'data-file-maid': 'costtoggle',
+                  'aria-expanded': openCost ? 'true' : 'false',
+                  'aria-controls': 'scan-cost',
+                  onClick: () => setOpenCost(!openCost),
+                },
+                t('section.cost'),
+              ),
+            ),
+            openCost ? h('div', { 'data-file-maid': 'costbody', id: 'scan-cost' }, costBody) : null,
+          );
 
           const scanGrid = h(
             'div',
@@ -2319,52 +2427,10 @@ window.__ModuleLoader__.load({
                   { 'data-file-maid': 'banner', 'data-tone': 'error' },
                   h('span', { 'data-file-maid': 'bannertext' }, scanNotice),
                 ),
-            scanGroup(
-              'result',
-              t('section.scan'),
-              h(
-                React.Fragment,
-                null,
-                h(
-                  'div',
-                  { 'data-file-maid': 'scanstat' },
-                  scanStat('files', scanCount(scan?.files), t('k.files')),
-                  scanStat('dirs', scanCount(scan?.dirs), t('k.dirs')),
-                  scanStat('ms', Number.isFinite(scan?.durationMs) ? `${scan.durationMs} ms` : '—', t('k.durationMs')),
-                ),
-                scanStatus,
-              scanArmed && reportCount > 0
-                ? h(
-                    'div',
-                    { 'data-file-maid': 'scannote', 'data-tone': 'warn', 'aria-live': 'polite' },
-                    fill(t('scan.rerunWarn'), { n: reportCount }),
-                  )
-                : null,
-              h(
-                'label',
-                { 'data-file-maid': 'exportrow' },
-                h('input', {
-                  type: 'checkbox',
-                  checked: exportWanted,
-                  disabled: readonly,
-                  'aria-describedby': readonly ? 'export-readonly' : undefined,
-                  onChange: (event) => {
-                    const next = event.target.checked;
-                    setExportWanted(next);
-                    try {
-                      window.localStorage.setItem(exportKey, next ? '1' : '0');
-                    } catch {
-                      /* a browser without storage still gets the checkbox */
-                    }
-                  },
-                }),
-                h('span', null, t('scan.export')),
-              ),
-              readonly ? h('div', { 'data-file-maid': 'scannote', id: 'export-readonly' }, t('scan.exportReadonly')) : null,
-              ),
-              scanAction,
-            ),
-            scanGroup('reconcile', t('section.reconcile'), reconcileBody, reconcileAside),
+            verdictBand,
+            scanGroup('who', t('section.who'), whoBody, whoAside),
+            leakGroup,
+            costGroup,
           );
           const scanBody = scan === undefined
             ? emptyState(

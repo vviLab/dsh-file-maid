@@ -321,15 +321,18 @@ test('M-20 the scan endpoint answers with the reconciliation', async (t) => {
   assert.ok(surface.descriptors.some((item) => item.id === 'fileMaid/scan'));
 });
 
-test('UI-11 the scan page offers a rerun button and a blind-spot list', async () => {
+test('UI-11 the scan page leads with a verdict and keeps the jargon out', async () => {
   const body = await readFile(join(import.meta.dirname, '..', 'src', 'client.js'), 'utf8');
-  assert.match(body, /'scan\.rerun': '重新扫描'/u);
+  assert.match(body, /'scan\.rerun': '重新扫一次'/u);
   assert.match(body, /callRemote\('scan'/u);
   assert.match(body, /descriptorOf\('scan', \['root', 'sessionId', 'payload'\]\)/u, 'the card must mount the scan descriptor');
-  assert.doesNotMatch(body, /'scanactions'/u, 'the action must not own a row of its own');
-  assert.match(body, /'scan\.scanNow': '立即扫描'/u, 'the empty state offers a scan');
-  assert.match(body, /'scan\.leakCount': '\{n\} 个改动没被记账'/u, 'the leak count belongs to the reconcile head');
-  assert.match(body, /'k\.ledger': '经工具写盘'/u);
+  assert.match(body, /'verdict\.clean': '没有文件绕过妹抖'/u, 'the answer comes first');
+  assert.match(body, /'k\.byMaid': '妹抖安排的'/u, 'the plugin is named in the reader\'s words');
+  assert.match(body, /'k\.onTheirOwn': '自己进来的'/u);
+  // The internal vocabulary never reaches the card.
+  for (const word of ['maid_put', '账本', '基线', '窗口']) {
+    assert.doesNotMatch(body, new RegExp(`'[a-z.]+': '[^']*${word}`, 'u'), `${word} leaked into a label`);
+  }
 });
 
 

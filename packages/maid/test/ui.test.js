@@ -190,7 +190,7 @@ test('UI-08 the three pages are 目录 / 日志 / 扫描 in both locales', async
   assert.match(body, /'view\.scan': '扫描'/u);
   assert.match(body, /'view\.dirs': 'Directories'/u);
   assert.match(body, /'view\.misplaced': 'Log'/u);
-  assert.match(body, /'section\.reconcile': '新增文件去哪了'/u);
+  assert.match(body, /'section\.who': '这段时间新来的文件，是谁放进来的'/u);
   // `gap` is an internal quantity; the card stopped showing it as a third number.
   assert.doesNotMatch(body, /'k\.gap'/u);
 });
@@ -534,7 +534,7 @@ test('UI-67 scan speed never touches the state badge or its tooltip', async () =
   assert.doesNotMatch(detail, /degraded/u, 'the tooltip does not repeat the performance note');
   // It keeps two homes of its own: a dismissible banner, and the 扫描 page line.
   assert.match(body, /const showDegraded = degraded && !dismissedRoots\.includes\(root\)/u);
-  assert.match(body, /scan\?\.degraded === true \? t\('scan\.degraded'\) : t\('scan\.degradedNone'\)/u);
+  assert.match(body, /scan\?\.degraded === true \? t\('scan\.degraded'\)/u);
 });
 
 test('UI-68 the fallback row is a star with the meaning on hover', async () => {
@@ -654,7 +654,7 @@ test('UI-77 a rescan asks for a second click while unrecorded changes are open',
   // scan, so an accidental click would swallow the list the operator is reading.
   assert.match(body, /if \(reportCount > 0 && !scanArmed\)/u);
   assert.match(body, /setScanArmed\(true\);\n\s+return;/u);
-  assert.match(body, /'scan\.rerunArm': '再点一次·会重算基线'/u);
+  assert.match(body, /'scan\.rerunArm': '再点一次：从现在重新算'/u);
   assert.match(body, /'scan\.rerunWarn'/u);
   // Armed state expires on its own so a stray click cannot leave the button primed.
   assert.match(body, /setTimeout\(\(\) => setScanArmed\(false\), 4000\)/u);
