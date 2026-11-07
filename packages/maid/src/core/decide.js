@@ -101,7 +101,7 @@ export function rank(catalog, intent, name) {
 /**
  * Decide the target directory for one file.
  * @param {{ catalog: object, name: string, intent?: string, dir?: string }} input - decision inputs.
- * @returns {{ ok: true, dir: string, decided_by: 'rule'|'agent'|'default', overridden: boolean, proposed?: string, matched?: number, candidates: object[] } | { ok: false, code: string, message: string }} the decision.
+ * @returns {{ ok: true, dir: string, decided_by: 'rule'|'agent'|'default', overridden: boolean, proposed?: string, matched?: { match: string, dir: string, index: number }, candidates: object[] } | { ok: false, code: string, message: string }} the decision.
  */
 export function decide(input) {
   const catalog = input.catalog;
@@ -119,7 +119,8 @@ export function decide(input) {
       decided_by: 'rule',
       overridden: proposed !== undefined && proposed !== rule.dir,
       proposed,
-      matched: rule.index,
+      // The word that matched, not its position: the card shows this as the reason.
+      matched: { match: rule.match, dir: rule.dir, index: rule.index },
       candidates,
     };
   }
