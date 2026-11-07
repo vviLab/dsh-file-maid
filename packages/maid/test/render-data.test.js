@@ -363,3 +363,14 @@ test('RD-08 the scan page builds the rich leak rows from the review reply', asyn
   assert.ok(texts.some((value) => value.includes('漏网.md')), 'the name is shown, not the whole path');
 });
 
+
+test('RD-09 the counts add up to the sentence, and no fact is stated twice', async () => {
+  const { texts } = await mount({ page: 'scan' });
+  const count = (needle) => texts.filter((value) => value === needle).length;
+  // The fixture has one residual, so the fourth cell exists and 1+1+2+1 = 5 would be
+  // the sentence number; without it the three above would not add up.
+  assert.ok(texts.includes('k.unclear'), 'a residual cell appears when there is a residual');
+  // The verdict says "N files did not go through" once; the list head must not repeat it.
+  assert.equal(count('scan.leakTitle'), 1, 'the list head appears once');
+  assert.equal(count('verdict.leak'), 1, 'the verdict appears once');
+});

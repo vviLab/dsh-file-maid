@@ -327,8 +327,10 @@ test('UI-11 the scan page leads with a verdict and keeps the jargon out', async 
   assert.match(body, /callRemote\('scan'/u);
   assert.match(body, /descriptorOf\('scan', \['root', 'sessionId', 'payload'\]\)/u, 'the card must mount the scan descriptor');
   assert.match(body, /'verdict\.clean': '没有文件绕过妹抖'/u, 'the answer comes first');
+  // One statement per fact: the group head no longer repeats the verdict.
+  assert.doesNotMatch(body, /const whoAside = baselineOnly/u);
   assert.match(body, /'k\.byMaid': '妹抖安排的'/u, 'the plugin is named in the reader\'s words');
-  assert.match(body, /'k\.onTheirOwn': '自己进来的'/u);
+  assert.match(body, /'k\.onTheirOwn': '没走妹抖的'/u, 'the same set keeps one name');
   // The internal vocabulary never reaches the card.
   for (const word of ['maid_put', '账本', '基线', '窗口']) {
     assert.doesNotMatch(body, new RegExp(`'[a-z.]+': '[^']*${word}`, 'u'), `${word} leaked into a label`);

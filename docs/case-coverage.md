@@ -277,3 +277,4 @@ grep -hoE "(C|D|X|R|PR|PL|M|T|UI|I|V|S|AK|EX|RD)-[0-9]+[a-z]?" packages/maid/tes
 | R-43 | R-43 a file written in the rotation millisecond stays a count | `ack.test.js` |
 | R-44 | R-44 a leak carries both clocks, so a rename is distinguishable from a write | `tools.test.js` |
 | UI-81 | UI-81 no dictionary key outlives the feature that showed it | `ui.test.js` |
+| RD-09 | RD-09 the counts add up to the sentence, and no fact is stated twice | `render-data.test.js` |

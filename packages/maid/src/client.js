@@ -172,14 +172,16 @@ window.__ModuleLoader__.load({
         'scan.never': '还没扫过',
         'scan.checked': '{age}查过',
         'scan.newLine': '这段时间新来了 {n} 个文件。',
+        'scan.noneNew': '这段时间没有新文件。',
         'scan.recordsIncomplete': '记录不全',
-        'scan.leakTitle': '这 {n} 个文件没走妹抖',
+        'scan.leakTitle': '需要你看的文件',
         'scan.costLine': '读了 {files} 个文件、{dirs} 个文件夹，用时 {ms} 毫秒',
         'section.who': '这段时间新来的文件，是谁放进来的',
         'section.cost': '这次扫描花了多少',
         'k.byMaid': '妹抖安排的',
         'k.byTools': '其他工具写的',
-        'k.onTheirOwn': '自己进来的',
+        'k.onTheirOwn': '没走妹抖的',
+        'k.unclear': '说不清',
         'section.catalog': '目录表',
         'section.misplaced': '最近落点',
         'scan.rerun': '重新扫一次',
@@ -209,7 +211,6 @@ window.__ModuleLoader__.load({
         'kind.other': '其他',
         'scan.scanNow': '现在看一次',
         'scan.freshBaseline': '第一次看，先记下现在的样子；下次才能比出谁新放了文件。',
-        'scan.noLeak': '没有文件绕过妹抖',
         'scan.residual': '还有 {n} 个文件只能看到数量，说不出是哪个。',
         'scan.ledgerNote': '账本未覆盖本次窗口，只报数量',
         'scan.recordedNote': '本窗口内日志轮转过，清单不可靠，只报数量',
@@ -358,14 +359,16 @@ window.__ModuleLoader__.load({
         'scan.never': 'never scanned',
         'scan.checked': 'checked {age}',
         'scan.newLine': '{n} new files arrived in this period.',
+        'scan.noneNew': 'No new files in this period.',
         'scan.recordsIncomplete': 'records incomplete',
-        'scan.leakTitle': '{n} files did not go through File Maid',
+        'scan.leakTitle': 'Files worth a look',
         'scan.costLine': 'Read {files} files and {dirs} folders in {ms} ms',
         'section.who': 'Who put these new files here',
         'section.cost': 'What this scan cost',
         'k.byMaid': 'placed by File Maid',
         'k.byTools': 'written by other tools',
-        'k.onTheirOwn': 'arrived on their own',
+        'k.onTheirOwn': 'not via File Maid',
+        'k.unclear': 'unclear',
         'section.catalog': 'Catalog',
         'section.misplaced': 'Recent decisions',
         'scan.rerun': 'Scan now',
@@ -395,7 +398,6 @@ window.__ModuleLoader__.load({
         'kind.other': 'other',
         'scan.scanNow': 'Look now',
         'scan.freshBaseline': 'First scan: the baseline is recorded now, so the next scan can show what is new.',
-        'scan.noLeak': 'no unrecorded changes',
         'scan.unknownFiles': 'Another {n} cannot be judged: they predate a log rotation, and that slice of the record is gone.',
         'scan.countMismatch': 'Files were also deleted in this window: the net change is {net} while {n} changes have no record — the two count different things.',
         'scan.residual': '{n} more only show up in the total; they cannot be named',
@@ -2307,18 +2309,27 @@ window.__ModuleLoader__.load({
           // ── ② 谁放进来的 ────────────────────────────────────────────────────
           // Three counts that add up: everything that appeared in this period was put
           // there by the plugin, written by some other tool, or arrived on its own.
+          /** The residual cell exists only when the number does; three cells must add up. */
+          const residualCell = !coverageLost && Number.isFinite(reconcile?.residual) && reconcile.residual > 0;
           const whoBody = baselineOnly
             ? scanNote('fresh', t('scan.freshBaseline'))
             : h(
                 React.Fragment,
                 null,
-                h('div', { 'data-file-maid': 'scansentence' }, fill(t('scan.newLine'), { n: num(reconcile.new_files) })),
                 h(
                   'div',
-                  { 'data-file-maid': 'scanstat' },
+                  { 'data-file-maid': 'scansentence' },
+                  Number(reconcile.new_files) > 0 ? fill(t('scan.newLine'), { n: num(reconcile.new_files) }) : t('scan.noneNew'),
+                ),
+                h(
+                  'div',
+                  { 'data-file-maid': 'scanstat', 'data-count': residualCell ? '4' : '3' },
                   scanStat('recorded', num(reconcile.recorded_files, reconcile.recorded), t('k.byMaid')),
                   scanStat('ledger', num(reconcile.ledger_files, reconcile.ledger), t('k.byTools')),
                   scanStat('leaks', num(reconcile.missing_total), t('k.onTheirOwn')),
+                  // The fourth cell only exists when there is a fourth number: without
+                  // it the three above would not add up to the sentence.
+                  residualCell ? scanStat('unclear', num(reconcile.residual), t('k.unclear')) : null,
                 ),
                 coverageLost
                   ? scanNote('ledgernote', decisionsGap ? t('scan.recordedNote') : t('scan.ledgerNote'))
@@ -2338,13 +2349,9 @@ window.__ModuleLoader__.load({
                     ? scanNote('residual', fill(t('scan.residual'), { n: reconcile.residual }))
                     : null,
               );
-          const whoAside = baselineOnly
-            ? null
-            : coverageLost
-              ? t('scan.recordsIncomplete')
-              : reportCount > 0
-                ? null
-                : t('scan.noLeak');
+          // The verdict band already says whether anything slipped in; repeating it in
+          // the group head was noise. Only the one fact it cannot carry stays here.
+          const whoAside = coverageLost ? t('scan.recordsIncomplete') : null;
 
           // ── ③ 需要你看的文件 ────────────────────────────────────────────────
           const leakBody = h(
@@ -2357,7 +2364,7 @@ window.__ModuleLoader__.load({
           const leakGroup =
             coverageLost || (reportCount === 0 && acceptedCount === 0)
               ? null
-              : scanGroup('leaks', fill(t('scan.leakTitle'), { n: reportCount }), leakBody, null);
+              : scanGroup('leaks', t('scan.leakTitle'), leakBody, null);
 
           // ── ④ 这次扫描花了多少 ──────────────────────────────────────────────
           // Cost, not value: it answers "is this slow?" and nothing else, so it sits
