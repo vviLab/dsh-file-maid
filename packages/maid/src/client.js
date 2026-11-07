@@ -184,6 +184,8 @@ window.__ModuleLoader__.load({
         'section.reconcile': '新增文件去哪了',
         'section.missing': '漏网文件',
         'scan.rerun': '重新扫描',
+        'scan.rerunArm': '再点一次·会重算基线',
+        'scan.rerunWarn': '重新扫描会从此刻重新算起，下面 {n} 条没被记账的改动会并入基线、不再列出。',
         'scan.running': '扫描中…',
         'scan.failed': '扫描没有完成，稍后再试。',
         'scan.more': '还有 {n} 个',
@@ -431,6 +433,8 @@ window.__ModuleLoader__.load({
         'section.reconcile': 'Where new files went',
         'section.missing': 'Unaccounted files',
         'scan.rerun': 'Scan now',
+        'scan.rerunArm': 'Click again: this rebaselines',
+        'scan.rerunWarn': 'Scanning restarts the window; the {n} unrecorded changes below become part of the baseline and stop being listed.',
         'scan.running': 'Scanning…',
         'scan.failed': 'The scan did not finish; try again shortly.',
         'scan.more': '{n} more',
@@ -1360,6 +1364,8 @@ window.__ModuleLoader__.load({
           const [picked, setPicked] = React.useState('');
           const [revision, setRevision] = React.useState(0);
           const [scanBusy, setScanBusy] = React.useState(false);
+          /** Armed rescan: a second click inside the window really does it. */
+          const [scanArmed, setScanArmed] = React.useState(false);
           const [scanNotice, setScanNotice] = React.useState('');
           /** Lazy review of the leak list: `phase` mirrors the request, `data` is the reply. */
           const [review, setReview] = React.useState({ key: '', phase: 'idle', data: null, message: '' });
@@ -2165,6 +2171,12 @@ window.__ModuleLoader__.load({
            * re-running it belong together, so the action sits on the same line as the
            * numbers it produces instead of owning a row above them.
            */
+          React.useEffect(() => {
+            if (!scanArmed) return undefined;
+            const timer = setTimeout(() => setScanArmed(false), 4000);
+            return () => clearTimeout(timer);
+          }, [scanArmed]);
+
           const scanAction = h(
             'button',
             {
@@ -2173,10 +2185,18 @@ window.__ModuleLoader__.load({
               'data-tone': 'brand',
               'aria-busy': scanBusy ? 'true' : 'false',
               onClick: () => {
-                if (!scanBusy) void runScan();
+                if (scanBusy) return;
+                // Rescanning moves the window to now, which swallows every leak found so
+                // far. Ask for the second click while there is something to lose.
+                if (reportCount > 0 && !scanArmed) {
+                  setScanArmed(true);
+                  return;
+                }
+                setScanArmed(false);
+                void runScan();
               },
             },
-            scanBusy ? t('scan.running') : t('scan.rerun'),
+            scanBusy ? t('scan.running') : scanArmed ? t('scan.rerunArm') : t('scan.rerun'),
           );
 
           /** Time, age and the one state word, on one line: they answer the same question. */
@@ -2443,6 +2463,13 @@ window.__ModuleLoader__.load({
                   scanStat('ms', Number.isFinite(scan?.durationMs) ? `${scan.durationMs} ms` : '—', t('k.durationMs')),
                 ),
                 scanStatus,
+              scanArmed && reportCount > 0
+                ? h(
+                    'div',
+                    { 'data-file-maid': 'scannote', 'data-tone': 'warn', 'aria-live': 'polite' },
+                    fill(t('scan.rerunWarn'), { n: reportCount }),
+                  )
+                : null,
               h(
                 'label',
                 { 'data-file-maid': 'exportrow' },

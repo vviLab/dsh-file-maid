@@ -647,3 +647,15 @@ test('UI-76 the export choice is remembered per root and only applies to the nex
   assert.match(body, /window\.localStorage\.setItem\(exportKey/u);
   assert.match(body, /'data-file-maid': 'exportrow'/u);
 });
+
+test('UI-77 a rescan asks for a second click while unrecorded changes are open', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // The first click only arms; the second one runs. The window moves to "now" on a
+  // scan, so an accidental click would swallow the list the operator is reading.
+  assert.match(body, /if \(reportCount > 0 && !scanArmed\)/u);
+  assert.match(body, /setScanArmed\(true\);\n\s+return;/u);
+  assert.match(body, /'scan\.rerunArm': '再点一次·会重算基线'/u);
+  assert.match(body, /'scan\.rerunWarn'/u);
+  // Armed state expires on its own so a stray click cannot leave the button primed.
+  assert.match(body, /setTimeout\(\(\) => setScanArmed\(false\), 4000\)/u);
+});
