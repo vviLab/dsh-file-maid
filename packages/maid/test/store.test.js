@@ -29,7 +29,7 @@ const AGENTS_MD = `# 工作区
 没命中时放这里：\`80-Outputs\`
 `;
 
-test('an absent .maid reports UNINITIALIZED', async (t) => {
+test('S-13 an absent .maid reports UNINITIALIZED', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   const loaded = await store.readCatalog(root);
@@ -47,7 +47,7 @@ test('V-06 invalid YAML reports E_MAID_YAML with a position', async (t) => {
   assert.ok(typeof loaded.errors[0].at === 'string');
 });
 
-test('an opt-out marker wins over a valid catalog', async (t) => {
+test('S-14 an opt-out marker wins over a valid catalog', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   const { validCatalog } = await import('./helpers.js');
@@ -111,7 +111,7 @@ test('S-05 a corrupt index.json is quarantined', async (t) => {
   assert.ok(names.some((name) => name.startsWith('index.json.corrupt-')));
 });
 
-test('a catalog round-trips through YAML and json', async (t) => {
+test('S-15 a catalog round-trips through YAML and json', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   const { validCatalog } = await import('./helpers.js');
@@ -124,7 +124,7 @@ test('a catalog round-trips through YAML and json', async (t) => {
   assert.ok(loaded.hash.startsWith('sha256:'));
 });
 
-test('an unknown catalog key is a warning, not a failure', async (t) => {
+test('S-16 an unknown catalog key is a warning, not a failure', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   const { validCatalog } = await import('./helpers.js');

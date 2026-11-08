@@ -141,7 +141,7 @@ test('L-05 a path outside the root is not recorded', async (t) => {
   assert.deepEqual(await ledger(root), []);
 });
 
-test('C-01 a scan keeps only files whose ctime is inside the window', async (t) => {
+test('R-45 a scan keeps only files whose ctime is inside the window', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true }));
   const { writeFile } = await import('node:fs/promises');
@@ -155,7 +155,7 @@ test('C-01 a scan keeps only files whose ctime is inside the window', async (t) 
   assert.equal(all.candidates[0].dir, '80-Outputs');
 });
 
-test('C-02 the candidate list stops at the limit and says so', async (t) => {
+test('R-46 the candidate list stops at the limit and says so', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true }));
   const { writeFile } = await import('node:fs/promises');

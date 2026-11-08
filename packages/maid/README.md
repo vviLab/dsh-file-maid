@@ -1,10 +1,10 @@
 # dsh-file-maid
 
-DSH 宿主内插件（5.0）。一个写入通道 `maid_put` 把文件落到工作区里正确的目录，`.maid/` 保护面由三条文件意图钩子守住，盲区由对账扫描量化。实施方案属内部文档，随维护者本地保留，不随仓库分发。
+DSH 宿主内插件，当前 5.0.0。一个写入通道 `maid_put` 把文件落到工作区里正确的目录，`.maid/` 保护面由三条文件意图钩子守住，盲区由对账扫描量化。实施方案属内部文档，随维护者本地保留，不随仓库分发。
 
 ## 装配
 
-插件挂在宿主进程内，随 DSH 启动加载，注册四个工具、一段系统提示上下文、四条拦截钩子与两条生命周期钩子。
+插件挂在宿主进程内，随 DSH 启动加载，注册五个工具、一段系统提示上下文、四条拦截钩子与两条生命周期钩子。
 
 ```bash
 cd packages/maid
@@ -20,7 +20,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 
 受控根等于当前会话的 `session.header.cwd`。插件不向父目录搜索，也不用 `workingDirectory` 的部署默认值兜底：会话没有 `cwd` 时工具返回 `E_MAID_NO_ROOT`，写面判定直接放行。判定另取 `workingDirectory.get(session)` 作为相对路径的第二个解析基准。
 
-激活条件是 `.maid/catalog.yml` 存在。四个工具始终注册，调用时判状态：
+激活条件是 `.maid/catalog.yml` 存在。五个工具始终注册，调用时判状态：
 
 | 状态 | 表现 |
 | --- | --- |
@@ -30,9 +30,9 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 
 初始化在侧栏卡片完成，`maid_init {mode}` 只接受 `defer` 与 `opt_out`（其余回 `E_MAID_CARD_REQUIRED` 语义）；`defer` 不写盘，`opt_out` 写 `.maid/opt-out`。
 
-**查找未登记的改动时用 `maid_review`，不要用 `maid_scan`**：扫描会覆写 `index.json` 把窗口推走，看一眼就等于放弃追查；复核只测量。确认（「这条我认了」）写在 `.maid/acknowledged.json`，键是 `path@ctime`——同一路径后续再被改写会重新出现。
+**查找未登记的改动时用 `maid_review`，不要用 `maid_scan`**：扫描会覆写 `index.json` 把窗口推走，看一眼就等于放弃追查；复核只测量。确认（「这条我知道」）写在 `.maid/acknowledged.json`，键是 `path@ctime`——同一路径后续再被改写会重新出现。
 
-## 四个工具
+## 五个工具
 
 | 工具 | 参数 | 写盘 |
 | --- | --- | --- |
@@ -42,7 +42,7 @@ dsh plugin add link:~/projects/dsh-file-maid/packages/maid
 | `maid_review {}` | 只测量：列出上次扫描以来没记账的改动（带体积与变更时间），不推进基线、不写盘 | 否 |
 | `maid_scan {scope?,report?,export?}` | 目录巡检 + 基线对账，可选落 `reports/scan-*.md`，`export:'json'` 再落同茎 `.json` | 报告／清单 |
 
-四个工具共用同一信封 `{schemaVersion, verdict, data, errors, warnings}`，从不抛异常。
+五个工具共用同一信封 `{schemaVersion, verdict, data, errors, warnings}`，从不抛异常。
 
 ## 判定链
 

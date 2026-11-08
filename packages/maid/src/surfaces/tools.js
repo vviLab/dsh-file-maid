@@ -336,7 +336,6 @@ export function createTools(options) {
             name: checked.name,
             decided_by: decision.decided_by,
             intent_source,
-            proposed: decision.proposed ?? null,
             candidates: decision.candidates,
             violations: outcome.violations ?? [],
             bytes: outcome.bytes,
@@ -355,7 +354,7 @@ export function createTools(options) {
         properties: {
           name: { type: 'string', description: '目标文件名，含扩展名' },
           intent: { type: 'string', description: '用途描述；缺省时从会话尾部推断' },
-          dir: { type: 'string', description: '调用方倾向的目录；规则优先' },
+          dir: { type: 'string', description: '你判断出的目录；改名会覆盖默认目录' },
         },
         required: ['name'],
         additionalProperties: false,

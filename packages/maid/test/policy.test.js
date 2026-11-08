@@ -43,7 +43,7 @@ test('I-01 an absolute .maid path is refused lexically', async (t) => {
   assert.equal(verdict?.reason, 'LEXICAL');
 });
 
-test('I-01 a relative .maid path is refused lexically', async (t) => {
+test('I-29 a relative .maid path is refused lexically', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   const verdict = judgeCall({ exec: execution('edit', { file_path: '.maid/catalog.yml' }), root, basis: root });
@@ -203,14 +203,14 @@ test('I-10 pre-execute returns a deny decision with the fixed prefix', async (t)
   assert.equal(decision.info.reason, 'LEXICAL');
 });
 
-test('the refusal keeps the documented prefix and code', () => {
+test('I-25 the refusal keeps the documented prefix and code', () => {
   const error = lockedError('INODE', '/tmp/x/.maid/y');
   assert.equal(error.code, 'FS_PERMISSION_DENIED');
   assert.equal(error.reason, 'INODE');
   assert.ok(error.message.startsWith('FILE_MAID:MAID_LOCKED:INODE'));
 });
 
-test('both resolution bases are judged', async (t) => {
+test('I-26 both resolution bases are judged', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   const candidates = candidatesFor({ root, basis: join(root, '.maid'), raw: 'nested/file.md', displayPath: join(root, '80-Outputs', 'file.md') });
@@ -219,7 +219,7 @@ test('both resolution bases are judged', async (t) => {
   assert.equal(refusal?.reason, 'LEXICAL');
 });
 
-test('an unprobeable .maid refuses as UNVERIFIED', async (t) => {
+test('I-27 an unprobeable .maid refuses as UNVERIFIED', async (t) => {
   const outer = await mkdtemp(join(tmpdir(), 'maid-unverified-'));
   const root = join(outer, 'root');
   await mkdir(join(root, '.maid'), { recursive: true });
@@ -232,7 +232,7 @@ test('an unprobeable .maid refuses as UNVERIFIED', async (t) => {
   assert.equal(protectionVerdict(join(root, '80-Outputs', 'x.md'), surface), 'UNVERIFIED');
 });
 
-test('only write, edit and str_replace_editor are judged', async (t) => {
+test('I-28 only write, edit and str_replace_editor are judged', async (t) => {
   const root = await makeRoot();
   t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
   for (const name of ['bash', 'read', 'glob', 'maid_route']) {
