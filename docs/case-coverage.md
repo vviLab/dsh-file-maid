@@ -217,6 +217,7 @@ console.log(rows.length, 'cases');
 | RD-07 | RD-07 switching to the scan page renders the verdict and the three counts | `render-data.test.js` |
 | RD-08 | RD-08 the scan page builds the rich leak rows from the review reply | `render-data.test.js` |
 | RD-09 | RD-09 the counts add up to the sentence, and no fact is stated twice | `render-data.test.js` |
+| RD-10 | RD-10 the counts carry their own sentence underneath | `render-data.test.js` |
 
 ## S-*
 

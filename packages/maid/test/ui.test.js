@@ -190,7 +190,8 @@ test('UI-08 the three pages are 目录 / 日志 / 扫描 in both locales', async
   assert.match(body, /'view\.scan': '扫描'/u);
   assert.match(body, /'view\.dirs': 'Directories'/u);
   assert.match(body, /'view\.misplaced': 'Log'/u);
-  assert.match(body, /'section\.who': '这段时间新来的文件，是谁放进来的'/u);
+  // The three counts are their own header: no group title above them.
+  assert.doesNotMatch(body, /'section\.who'/u);
   // `gap` is an internal quantity; the card stopped showing it as a third number.
   assert.doesNotMatch(body, /'k\.gap'/u);
 });

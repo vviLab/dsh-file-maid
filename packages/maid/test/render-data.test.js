@@ -374,3 +374,15 @@ test('RD-09 the counts add up to the sentence, and no fact is stated twice', asy
   assert.equal(count('scan.leakTitle'), 1, 'the list head appears once');
   assert.equal(count('verdict.leak'), 1, 'the verdict appears once');
 });
+
+
+test('RD-10 the counts carry their own sentence underneath', async () => {
+  const { texts, hooks } = await mount({ page: 'scan' });
+  const sentence = texts.indexOf('scan.newLine') >= 0 ? texts.indexOf('scan.newLine') : texts.indexOf('scan.noneNew');
+  const firstCell = Math.min(...['k.byMaid', 'k.byTools', 'k.onTheirOwn'].map((key) => texts.indexOf(key)).filter((i) => i >= 0));
+  assert.ok(firstCell >= 0, 'the three counts are rendered');
+  assert.ok(sentence > firstCell, 'the sentence reads under the numbers, not above them');
+  // The block needs no title of its own; the numbers are the header.
+  assert.equal(texts.includes('section.who'), false, 'the group title is gone');
+  assert.ok(hooks.has('scansentence'));
+});

@@ -176,7 +176,6 @@ window.__ModuleLoader__.load({
         'scan.recordsIncomplete': '记录不全',
         'scan.leakTitle': '需要你看的文件',
         'scan.costLine': '读了 {files} 个文件、{dirs} 个文件夹，用时 {ms} 毫秒',
-        'section.who': '这段时间新来的文件，是谁放进来的',
         'section.cost': '这次扫描花了多少',
         'k.byMaid': '妹抖安排的',
         'k.byTools': '其他工具写的',
@@ -363,7 +362,6 @@ window.__ModuleLoader__.load({
         'scan.recordsIncomplete': 'records incomplete',
         'scan.leakTitle': 'Files worth a look',
         'scan.costLine': 'Read {files} files and {dirs} folders in {ms} ms',
-        'section.who': 'Who put these new files here',
         'section.cost': 'What this scan cost',
         'k.byMaid': 'placed by File Maid',
         'k.byTools': 'written by other tools',
@@ -1077,7 +1075,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="verdictmeta"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"]{font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
-            '[data-file-maid="scansentence"]{font-size:var(--maid-fs-body);line-height:1.4;padding:2px 0 4px;}',
+            '[data-file-maid="scansentence"]{font-size:var(--maid-fs-meta);line-height:1.4;padding:2px 0 2px;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="costtoggle"]{display:flex;align-items:center;gap:4px;min-height:22px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
             '[data-file-maid="costtoggle"]::before{content:"▸";font-size:var(--maid-fs-meta);line-height:1;}',
             '[data-file-maid="scangroup"][data-open="true"] [data-file-maid="costtoggle"]::before{content:"▾";}',
@@ -2025,18 +2023,17 @@ window.__ModuleLoader__.load({
               h('span', { 'data-file-maid': 'scanval' }, value),
               h('span', { 'data-file-maid': 'scanlabel' }, label),
             );
-          const scanGroup = (key, title, block, aside) =>
-            h(
-              'div',
-              { key, 'data-file-maid': 'scangroup' },
-              h(
-                'div',
-                { 'data-file-maid': 'sectionhead' },
-                h('span', { 'data-file-maid': 'sectionlabel' }, title),
-                aside ?? null,
-              ),
-              block,
-            );
+          const scanGroup = (key, title, block, aside) => {
+            const head = title === null && aside === null
+              ? null
+              : h(
+                  'div',
+                  { 'data-file-maid': 'sectionhead' },
+                  title === null ? null : h('span', { 'data-file-maid': 'sectionlabel' }, title),
+                  aside ?? null,
+                );
+            return h('div', { key, 'data-file-maid': 'scangroup' }, head, block);
+          };
 
           // Older snapshots used `at`; newer ones `scannedAt`. Accept both.
           const scannedAt = typeof scan?.scannedAt === 'string' ? scan.scannedAt : typeof scan?.at === 'string' ? scan.at : '';
@@ -2318,11 +2315,6 @@ window.__ModuleLoader__.load({
                 null,
                 h(
                   'div',
-                  { 'data-file-maid': 'scansentence' },
-                  Number(reconcile.new_files) > 0 ? fill(t('scan.newLine'), { n: num(reconcile.new_files) }) : t('scan.noneNew'),
-                ),
-                h(
-                  'div',
                   { 'data-file-maid': 'scanstat', 'data-count': residualCell ? '4' : '3' },
                   scanStat('recorded', num(reconcile.recorded_files, reconcile.recorded), t('k.byMaid')),
                   scanStat('ledger', num(reconcile.ledger_files, reconcile.ledger), t('k.byTools')),
@@ -2330,6 +2322,13 @@ window.__ModuleLoader__.load({
                   // The fourth cell only exists when there is a fourth number: without
                   // it the three above would not add up to the sentence.
                   residualCell ? scanStat('unclear', num(reconcile.residual), t('k.unclear')) : null,
+                ),
+                // The sentence is the caption of the three numbers above it, so it goes
+                // under them — above, it read like a heading and pushed the counts down.
+                h(
+                  'div',
+                  { 'data-file-maid': 'scansentence' },
+                  Number(reconcile.new_files) > 0 ? fill(t('scan.newLine'), { n: num(reconcile.new_files) }) : t('scan.noneNew'),
                 ),
                 coverageLost
                   ? scanNote('ledgernote', decisionsGap ? t('scan.recordedNote') : t('scan.ledgerNote'))
@@ -2435,7 +2434,7 @@ window.__ModuleLoader__.load({
                   h('span', { 'data-file-maid': 'bannertext' }, scanNotice),
                 ),
             verdictBand,
-            scanGroup('who', t('section.who'), whoBody, whoAside),
+            scanGroup('who', null, whoBody, whoAside),
             leakGroup,
             costGroup,
           );
