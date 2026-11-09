@@ -535,7 +535,7 @@ test('UI-67 scan speed never touches the state badge or its tooltip', async () =
   assert.doesNotMatch(detail, /degraded/u, 'the tooltip does not repeat the performance note');
   // It keeps two homes of its own: a dismissible banner, and the 扫描 page line.
   assert.match(body, /const showDegraded = degraded && !dismissedRoots\.includes\(root\)/u);
-  assert.match(body, /scan\?\.degraded === true \? t\('scan\.degraded'\)/u);
+  assert.match(body, /scan\?\.degraded === true\s*\n?\s*\? h\('span', \{ 'data-file-maid': 'scanverdict'[^\n]*/u);
 });
 
 test('UI-68 the fallback row is a star with the meaning on hover', async () => {

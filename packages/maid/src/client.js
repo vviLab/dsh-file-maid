@@ -1076,10 +1076,10 @@ window.__ModuleLoader__.load({
             '[data-file-maid="morebar"]{min-height:24px;}',
             '[data-file-maid="emptystate"] [data-file-maid="scanact"]{min-height:28px;padding:0 12px;}',
             '[data-file-maid="verdictband"]{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 0 6px;border-bottom:1px solid var(--dsw-alias-border-l1);}',
-            '[data-file-maid="verdictline"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;}',
-            '[data-file-maid="verdicttext"]{flex:1;min-width:0;font-size:var(--maid-fs-body);font-weight:600;line-height:1.3;overflow-wrap:anywhere;}',
+            '[data-file-maid="verdictline"]{display:block;min-width:0;}',
+            '[data-file-maid="verdicttext"]{display:block;font-size:var(--maid-fs-body);font-weight:600;line-height:1.4;overflow-wrap:anywhere;}',
             '[data-file-maid="verdicttext"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
-            '[data-file-maid="verdictmeta"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="verdictmeta"]{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"]{font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
                         '[data-file-maid="costtoggle"]{display:flex;align-items:center;gap:4px;min-height:22px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
@@ -2378,12 +2378,19 @@ window.__ModuleLoader__.load({
           const verdictBand = h(
             'div',
             { 'data-file-maid': 'verdictband' },
+            // The sentence owns its own line. Sharing a row with two buttons is what
+            // squeezed it into a five-character column.
             h(
               'div',
               { 'data-file-maid': 'verdictline' },
               h('span', { 'data-file-maid': 'verdicttext', 'data-tone': verdictTone }, verdictText),
-              // The record of *which* files lives on the log page, so the way there
-              // belongs next to the verdict it explains — not three blocks lower.
+            ),
+            h(
+              'div',
+              { 'data-file-maid': 'verdictmeta' },
+              h('span', { 'data-file-maid': 'scanage' }, scanAge === '' ? t('scan.never') : fill(t('scan.checked'), { age: scanAge })),
+              // The record of *which* files lives on the log page; the way there belongs
+              // with the verdict it explains, on the quiet line right under it.
               reportCount === 0
                 ? null
                 : h(
@@ -2396,17 +2403,10 @@ window.__ModuleLoader__.load({
                     t('scan.openLog'),
                   ),
               h('span', { 'data-file-maid': 'spacer' }),
+              scan?.degraded === true
+                ? h('span', { 'data-file-maid': 'scanverdict', 'data-tone': 'warn' }, t('scan.degraded'))
+                : null,
               scanAction,
-            ),
-            h(
-              'div',
-              { 'data-file-maid': 'verdictmeta' },
-              h('span', { 'data-file-maid': 'scanage' }, scanAge === '' ? t('scan.never') : fill(t('scan.checked'), { age: scanAge })),
-              h(
-                'span',
-                { 'data-file-maid': 'scanverdict', 'data-tone': scan?.degraded === true ? 'warn' : undefined },
-                scan?.degraded === true ? t('scan.degraded') : '',
-              ),
             ),
             scanArmed && reportCount > 0
               ? h(
