@@ -477,3 +477,14 @@ test('RD-16 opening one row never opens a row in the other group', async () => {
   assert.ok(ids.length >= 2, `both groups rendered rows; saw ${ids.join(', ')}`);
   assert.equal(new Set(ids).size, ids.length, 'every row owns a unique detail id');
 });
+
+test('RD-17 a stray row explains itself and stops there', async () => {
+  const { texts } = await mount({ page: 'misplaced' });
+  // The detail says what the row is and why it is here; no button sends the reader back
+  // to a page that shows the same list five rows at a time.
+  assert.equal(texts.includes('log.goScan'), false, 'no round trip to the scan tab');
+  assert.ok(texts.includes('漏网.md'), 'the stray itself is listed');
+  const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(source, /t\('log\.leakWhy'\)/u, 'the reason stays in the expanded row');
+  assert.equal(source.includes('log.goScan'), false, 'and the button is gone from the source');
+});

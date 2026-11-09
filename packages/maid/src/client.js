@@ -187,7 +187,6 @@ window.__ModuleLoader__.load({
         'log.groupMaid': '妹抖安排的',
         'log.stray': '自己进来的',
         'log.leakWhy': '它出现在扫描范围里，但两个记账通道都没有它的记录。',
-        'log.goScan': '到扫描页看',
         'scan.rerun': '重新扫一次',
         'scan.rerunArm': '再点一次：从现在重新算',
         'scan.rerunWarn': '再扫一次就从现在重新算：这 {n} 个还没确认的文件会算进去，以后不再提醒。',
@@ -376,7 +375,6 @@ window.__ModuleLoader__.load({
         'log.groupMaid': 'Placed by File Maid',
         'log.stray': 'on its own',
         'log.leakWhy': 'It appeared inside a tracked folder and neither record channel knows it.',
-        'log.goScan': 'Open the scan tab',
         'scan.rerun': 'Scan now',
         'scan.rerunArm': 'Click again: restart the count',
         'scan.rerunWarn': 'Rescanning restarts the count: these {n} unconfirmed files are absorbed and will not be listed again.',
@@ -2062,15 +2060,6 @@ window.__ModuleLoader__.load({
                       { 'data-file-maid': 'itemfact' },
                       h('span', { 'data-file-maid': 'itemfactlabel' }, t('misplaced.byLabel')),
                       h('span', { 'data-file-maid': 'itemstamp' }, t('log.leakWhy')),
-                    ),
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        'data-file-maid': 'linkbutton',
-                        onClick: () => setView('scan'),
-                      },
-                      t('log.goScan'),
                     ),
                   )
                 : null,

@@ -337,3 +337,4 @@ console.log(rows.length, 'cases');
 | RD-14 | RD-14 a long list is read page by page, not scrolled | `render-data.test.js` |
 | RD-15 | RD-15 twenty-odd strays come ten at a time, with a pager | `render-data.test.js` |
 | RD-16 | RD-16 opening one row never opens a row in the other group | `render-data.test.js` |
+| RD-17 | RD-17 a stray row explains itself and stops there | `render-data.test.js` |
