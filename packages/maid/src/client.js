@@ -173,6 +173,9 @@ window.__ModuleLoader__.load({
         'scan.checked': '{age}查过',
         'scan.recordsIncomplete': '记录不全',
         'scan.openLog': '在日志里看',
+        'page.prev': '上一页',
+        'page.next': '下一页',
+        'page.of': '第 {n} / {total} 页',
         'scan.costLine': '读了 {files} 个文件、{dirs} 个文件夹，用时 {ms} 毫秒',
         'section.cost': '这次扫描花了多少',
         'k.byMaid': '妹抖安排的',
@@ -190,7 +193,6 @@ window.__ModuleLoader__.load({
         'scan.rerunWarn': '再扫一次就从现在重新算：这 {n} 个还没确认的文件会算进去，以后不再提醒。',
         'scan.running': '扫描中…',
         'scan.failed': '扫描没有完成，稍后再试。',
-        'scan.more': '还有 {n} 个',
         'scan.ack': '这条我知道',
         'scan.ackUndo': '撤销确认',
         'scan.ackDone': '记下了：{name}',
@@ -199,7 +201,6 @@ window.__ModuleLoader__.load({
         'scan.ackReadonly': '这次会话不能改文件，确认也没法保存。',
         'scan.reviewLoading': '正在读取体积与变更时间…',
         'scan.reviewFailed': '只读到路径，先看看是哪个。',
-        'scan.showAll': '展开 {n} 条',
         'scan.truncatedNote': '清单到 {n} 条上限，只保留最新的。',
         'scan.export': '每次扫描顺便存一份清单',
         'scan.exportReadonly': '只读会话不能写导出文件。',
@@ -361,6 +362,9 @@ window.__ModuleLoader__.load({
         'scan.checked': 'checked {age}',
         'scan.recordsIncomplete': 'records incomplete',
         'scan.openLog': 'See them in the log',
+        'page.prev': 'Previous',
+        'page.next': 'Next',
+        'page.of': 'Page {n} of {total}',
         'scan.costLine': 'Read {files} files and {dirs} folders in {ms} ms',
         'section.cost': 'What this scan cost',
         'k.byMaid': 'placed by File Maid',
@@ -378,7 +382,6 @@ window.__ModuleLoader__.load({
         'scan.rerunWarn': 'Rescanning restarts the count: these {n} unconfirmed files are absorbed and will not be listed again.',
         'scan.running': 'Scanning…',
         'scan.failed': 'The scan did not finish; try again shortly.',
-        'scan.more': '{n} more',
         'scan.ack': 'Got it',
         'scan.ackUndo': 'Undo',
         'scan.ackDone': 'Accepted "{name}"',
@@ -387,7 +390,6 @@ window.__ModuleLoader__.load({
         'scan.ackReadonly': 'Read-only session: leaks cannot be accepted.',
         'scan.reviewLoading': 'Reading size and change time…',
         'scan.reviewFailed': 'Details did not load; paths only, so accepting is unavailable.',
-        'scan.showAll': 'Show {n} more',
         'scan.truncatedNote': 'The list stops at {n}; the newest are kept.',
         'scan.export': 'Also export the list when scanning',
         'scan.exportReadonly': 'Read-only session: nothing can be exported.',
@@ -1084,6 +1086,8 @@ window.__ModuleLoader__.load({
             '[data-file-maid="costtoggle"]::before{content:"▸";font-size:var(--maid-fs-meta);line-height:1;}',
             '[data-file-maid="scangroup"][data-open="true"] [data-file-maid="costtoggle"]::before{content:"▾";}',
             '[data-file-maid="loggroup"]{display:flex;flex-direction:column;min-width:0;}',
+            '[data-file-maid="pager"]{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:2px 0;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="pagecount"]{font-variant-numeric:tabular-nums;}',
             '[data-file-maid="loggroup"]+[data-file-maid="loggroup"]{margin-top:6px;}',
             '[data-file-maid="costbody"]{display:flex;flex-direction:column;gap:2px;padding-top:2px;}',
             '[data-file-maid="costline"]{font-size:var(--maid-fs-meta);line-height:1.4;color:var(--dsw-alias-label-secondary);}',
@@ -1464,6 +1468,9 @@ window.__ModuleLoader__.load({
           const [purposeOpen, setPurposeOpen] = React.useState('');
           /** Which log row is expanded to show its full path. */
           const [openLog, setOpenLog] = React.useState('');
+          /** One page at a time, per list: a long list is read page by page, not scrolled. */
+          const [logPage, setLogPage] = React.useState({ leaks: 1, routes: 1 });
+          const [leakPage, setLeakPage] = React.useState(1);
           const [clippedDir, setClippedDir] = React.useState('');
 
           /** The setup layer: undefined while browsing, an object while setting up. */
@@ -2070,8 +2077,45 @@ window.__ModuleLoader__.load({
             );
           };
 
-          const logGroup = (key, title, count, rows) =>
-            h(
+          const PAGE_SIZE = 10;
+          /** Clamp a page number to the pages that exist; a shrinking list must not strand you. */
+          const pageOf = (rows, page, size) => {
+            const pages = Math.max(1, Math.ceil(rows.length / size));
+            const at = Math.min(Math.max(1, page), pages);
+            return { rows: rows.slice((at - 1) * size, at * size), at, pages };
+          };
+          const pager = (key, page, pages, go) =>
+            pages <= 1
+              ? null
+              : h(
+                  'div',
+                  { key, 'data-file-maid': 'pager' },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      'data-file-maid': 'linkbutton',
+                      disabled: page <= 1,
+                      onClick: () => go(page - 1),
+                    },
+                    t('page.prev'),
+                  ),
+                  h('span', { 'data-file-maid': 'pagecount' }, fill(t('page.of'), { n: page, total: pages })),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      'data-file-maid': 'linkbutton',
+                      disabled: page >= pages,
+                      onClick: () => go(page + 1),
+                    },
+                    t('page.next'),
+                  ),
+                );
+
+          const logGroup = (key, title, count, rows, page, setPage) => {
+            const view = pageOf(rows, page, PAGE_SIZE);
+            return h(
               'div',
               { key, 'data-file-maid': 'loggroup' },
               h(
@@ -2079,8 +2123,10 @@ window.__ModuleLoader__.load({
                 { 'data-file-maid': 'sectionhead' },
                 h('span', { 'data-file-maid': 'sectionlabel' }, `${title} ${count}`),
               ),
-              h('ul', { 'data-file-maid': 'list' }, rows),
+              h('ul', { 'data-file-maid': 'list' }, view.rows),
+              pager(`${key}-pager`, view.at, view.pages, setPage),
             );
+          };
 
           const misplacedList =
             timeline.length === 0 && leaks.length === 0
@@ -2088,8 +2134,16 @@ window.__ModuleLoader__.load({
               : h(
                   React.Fragment,
                   null,
-                  leaks.length === 0 ? null : logGroup('log-leaks', t('log.groupLeak'), leaks.length, leaks.map(logRow)),
-                  timeline.length === 0 ? null : logGroup('log-routes', t('log.groupMaid'), timeline.length, timeline.map(logRow)),
+                  leaks.length === 0
+                    ? null
+                    : logGroup('log-leaks', t('log.groupLeak'), leaks.length, leaks.map(logRow), logPage.leaks, (next) =>
+                        setLogPage({ ...logPage, leaks: next }),
+                      ),
+                  timeline.length === 0
+                    ? null
+                    : logGroup('log-routes', t('log.groupMaid'), timeline.length, timeline.map(logRow), logPage.routes, (next) =>
+                        setLogPage({ ...logPage, routes: next }),
+                      ),
                 );
 
           /**
@@ -2170,13 +2224,17 @@ window.__ModuleLoader__.load({
           }, [view, reviewKey, reportCount, acceptedCount]);
 
           /** The list shown before the rich reply lands: paths only, newest first. */
-          const missingRows = openLeaks.slice(0, 5);
+          const SCAN_PAGE_SIZE = 5;
+          /** The rows the scan tab shows for the current page of leaks. */
+          const missingPage = pageOf(openLeaks, leakPage, SCAN_PAGE_SIZE);
+          const missingRows = missingPage.rows;
           /** The rich reply, once it lands: name, owner, size, and the confirmation. */
           const rich = review.phase === 'ok' && review.data !== null ? review.data : null;
           /** A read-only session may look, not touch. */
           const readonly = rich?.readOnly === true;
           const ledgerRows = rich === null ? [] : (rich.missing ?? []).filter((item) => !ackedLocal.includes(`${item.path}@${item.ctime}`));
-          const shown = rich === null ? missingRows.length : Math.min(5, ledgerRows.length);
+          const ledgerPage = pageOf(ledgerRows, leakPage, SCAN_PAGE_SIZE);
+          const shown = rich === null ? missingRows.length : ledgerPage.rows.length;
           /** One compact fact line inside an opened row. */
           const factLine = (label, value, key) =>
             h(
@@ -2196,7 +2254,7 @@ window.__ModuleLoader__.load({
             ? missingRows.map((item) =>
                 h('div', { key: `missing-${item.path}`, 'data-file-maid': 'scanrow' }, h('span', { 'data-file-maid': 'scanval' }, item.path)),
               )
-            : ledgerRows.slice(0, 5).map((item) => {
+            : ledgerPage.rows.map((item) => {
                 const name = item.path.split('/').pop();
                 const open = openLeak === item.path;
                 return h(
@@ -2249,24 +2307,12 @@ window.__ModuleLoader__.load({
                 );
               });
           const missingBody = [...leakRows];
-          if (rich === null && missingRows.length > 0 && reportCount > missingRows.length) {
-            missingBody.push(
-              h(
-                'div',
-                { key: 'missing-more', 'data-file-maid': 'scanrow' },
-                h('span', { 'data-file-maid': 'scanval' }, fill(t('scan.more'), { n: reportCount - missingRows.length })),
-              ),
-            );
-          }
-          if (rich !== null && ledgerRows.length > shown) {
-            missingBody.push(
-              h(
-                'div',
-                { key: 'leak-more', 'data-file-maid': 'scanrow' },
-                h('span', { 'data-file-maid': 'scanval' }, fill(t('scan.showAll'), { n: ledgerRows.length - shown })),
-              ),
-            );
-          }
+          // Pages, not a "还有 N 条" line: the count in the verdict already says how many,
+          // and a dead label gives the reader no way to reach them.
+          const scanPager = rich === null
+            ? pager('scan-pager', missingPage.at, missingPage.pages, setLeakPage)
+            : pager('scan-pager', ledgerPage.at, ledgerPage.pages, setLeakPage);
+          if (scanPager !== null) missingBody.push(scanPager);
           if (rich !== null && rich.truncated === true) {
             missingBody.push(
               h('div', { key: 'leak-trunc', 'data-file-maid': 'scannote' }, fill(t('scan.truncatedNote'), { n: rich.candidateLimit })),

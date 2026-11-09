@@ -334,3 +334,5 @@ console.log(rows.length, 'cases');
 | RD-11 | RD-11 the log page separates what File Maid placed from what arrived on its own | `render-data.test.js` |
 | RD-12 | RD-12 the scan page offers a way into the log without hunting for the tab | `render-data.test.js` |
 | RD-13 | RD-13 the log page starts with the rows, not with a heading | `render-data.test.js` |
+| RD-14 | RD-14 a long list is read page by page, not scrolled | `render-data.test.js` |
+| RD-15 | RD-15 twenty-odd strays come ten at a time, with a pager | `render-data.test.js` |

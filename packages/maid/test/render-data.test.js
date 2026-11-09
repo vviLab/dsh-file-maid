@@ -173,7 +173,7 @@ function runtime() {
  * Mount the card with a fixture and collect what it rendered.
  * @returns {Promise<{tree: object, hooks: Set<string>, texts: string[]}>} the result.
  */
-async function mount({ page } = {}) {
+async function mount({ page, status } = {}) {
   const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   const dom = new JSDOM('<!doctype html><body><div id="dsh-st-shell-panel"></div></body>', { url: 'http://localhost/' });
   const { window } = dom;
@@ -217,7 +217,7 @@ async function mount({ page } = {}) {
   vm.runInContext(source, sandbox);
   assert.ok(module !== null, 'the bundle registers itself');
 
-  const text = JSON.stringify(STATUS, null, 2);
+  const text = JSON.stringify(status ?? STATUS, null, 2);
   const sessions = {
     list: {
       getSnapshot: () => ({ ids: ['s1'], byId: { s1: { cwd: STATUS.root, updatedAt: 1 } } }),
@@ -426,3 +426,37 @@ test('RD-13 the log page starts with the rows, not with a heading', async () => 
   assert.ok(texts.some((value) => value.startsWith('log.groupMaid')), 'the placement group is labelled');
   assert.ok(hooks.has('loggroup'));
 });
+
+test('RD-14 a long list is read page by page, not scrolled', async () => {
+  const { texts, hooks } = await mount({ page: 'misplaced' });
+  // One placement and one stray fit on one page, so no pager appears yet.
+  assert.equal(hooks.has('pager'), false, 'a short list needs no pager');
+  const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // The page size and both labels exist; without them a 500-row list would be unbounded.
+  assert.match(source, /const PAGE_SIZE = 10;/u);
+  assert.match(source, /const SCAN_PAGE_SIZE = 5;/u);
+  assert.match(source, /'page\.prev'/u);
+  assert.match(source, /'page\.next'/u);
+  assert.match(source, /'page\.of'/u);
+});
+
+test('RD-15 twenty-odd strays come ten at a time, with a pager', async () => {
+  const many = Array.from({ length: 23 }, (_, index) => ({
+    path: `80-Outputs/漏网-${String(index).padStart(2, '0')}.md`,
+    dir: '80-Outputs',
+    ctime: Date.parse('2026-11-05T11:59:30.000Z') + index * 1000,
+    acknowledged: false,
+  }));
+  const status = {
+    ...STATUS,
+    reconcile: { ...STATUS.reconcile, missing: many, missing_total: 23 },
+  };
+  const { texts, hooks } = await mount({ page: 'misplaced', status });
+  assert.ok(hooks.has('pager'), 'a 23-row group needs a pager');
+  assert.ok(stackCount(texts, '漏网-') === 10, `one page holds ten rows; saw ${stackCount(texts, '漏网-')}`);
+  assert.ok(texts.some((value) => value.includes('1') && value.includes('3')), 'the pager states 1 / 3');
+});
+
+function stackCount(texts, prefix) {
+  return texts.filter((value) => typeof value === 'string' && value.startsWith(prefix)).length;
+}
