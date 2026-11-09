@@ -183,7 +183,9 @@ window.__ModuleLoader__.load({
         'k.unclear': '说不清',
         'section.catalog': '目录表',
         'section.log': '最近的落点与漏网',
-        'log.leakTag': '没走妹抖的',
+        'log.groupLeak': '没走妹抖的',
+        'log.groupMaid': '妹抖安排的',
+        'log.stray': '自己进来的',
         'log.leakWhy': '它出现在扫描范围里，但两个记账通道都没有它的记录。',
         'log.goScan': '到扫描页看',
         'scan.rerun': '重新扫一次',
@@ -372,7 +374,9 @@ window.__ModuleLoader__.load({
         'k.unclear': 'unclear',
         'section.catalog': 'Catalog',
         'section.log': 'Recent placements and strays',
-        'log.leakTag': 'not via File Maid',
+        'log.groupLeak': 'Not via File Maid',
+        'log.groupMaid': 'Placed by File Maid',
+        'log.stray': 'on its own',
         'log.leakWhy': 'It appeared inside a tracked folder and neither record channel knows it.',
         'log.goScan': 'Open the scan tab',
         'scan.rerun': 'Scan now',
@@ -1085,6 +1089,8 @@ window.__ModuleLoader__.load({
             '[data-file-maid="costtoggle"]{display:flex;align-items:center;gap:4px;min-height:22px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
             '[data-file-maid="costtoggle"]::before{content:"▸";font-size:var(--maid-fs-meta);line-height:1;}',
             '[data-file-maid="scangroup"][data-open="true"] [data-file-maid="costtoggle"]::before{content:"▾";}',
+            '[data-file-maid="loggroup"]{display:flex;flex-direction:column;min-width:0;}',
+            '[data-file-maid="loggroup"]+[data-file-maid="loggroup"]{margin-top:6px;}',
             '[data-file-maid="costbody"]{display:flex;flex-direction:column;gap:2px;padding-top:2px;}',
             '[data-file-maid="costline"]{font-size:var(--maid-fs-meta);line-height:1.4;color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scannote"]{margin-top:4px;font-size:var(--maid-fs-meta);line-height:1.4;min-height:15px;color:var(--dsw-alias-label-secondary);}',
@@ -2004,9 +2010,11 @@ window.__ModuleLoader__.load({
             atMs: typeof item.at === 'string' ? Date.parse(item.at) || 0 : 0,
             item,
           }));
-          // Newest first. The two clocks disagree in origin but agree in meaning: both
-          // mark when the file showed up, so one list can hold both.
-          const timeline = [...routeLogRows, ...leakLogRows].sort((a, b) => b.atMs - a.atMs);
+          // Two groups, newest first inside each: a reader comes to this page with one of
+          // two questions — "did my files land where I meant" or "what slipped in" — and
+          // interleaving the two makes both take longer to answer.
+          const timeline = [...routeLogRows].sort((a, b) => b.atMs - a.atMs);
+          const leaks = leakLogRows.sort((a, b) => b.atMs - a.atMs);
 
           const logRow = (entry, index) => (entry.kind === 'leak' ? leakLogRow(entry, index) : misplacedRow(entry.item, index));
 
@@ -2034,11 +2042,7 @@ window.__ModuleLoader__.load({
                   { 'data-file-maid': 'itemhead' },
                   h('span', { 'data-file-maid': 'chevron', 'aria-hidden': 'true' }, open ? '▾' : '▸'),
                   h('span', { 'data-file-maid': 'itemname' }, name === '' ? '—' : name),
-                  h(
-                    'span',
-                    { 'data-file-maid': 'itemtarget', 'data-tone': 'warn' },
-                    t('log.leakTag'),
-                  ),
+                  h('span', { 'data-file-maid': 'itemtarget', 'data-tone': 'warn' }, t('log.stray')),
                   age === '' ? null : h('span', { 'data-file-maid': 'itemage' }, age),
                 ),
               ),
@@ -2072,10 +2076,27 @@ window.__ModuleLoader__.load({
             );
           };
 
+          const logGroup = (key, title, count, rows) =>
+            h(
+              'div',
+              { key, 'data-file-maid': 'loggroup' },
+              h(
+                'div',
+                { 'data-file-maid': 'sectionhead' },
+                h('span', { 'data-file-maid': 'sectionlabel' }, `${title} ${count}`),
+              ),
+              h('ul', { 'data-file-maid': 'list' }, rows),
+            );
+
           const misplacedList =
-            timeline.length === 0
+            timeline.length === 0 && leaks.length === 0
               ? emptyState(t('misplaced.empty'), t('misplaced.emptyHint'))
-              : h('ul', { 'data-file-maid': 'list' }, timeline.map(logRow));
+              : h(
+                  React.Fragment,
+                  null,
+                  leaks.length === 0 ? null : logGroup('log-leaks', t('log.groupLeak'), leaks.length, leaks.map(logRow)),
+                  timeline.length === 0 ? null : logGroup('log-routes', t('log.groupMaid'), timeline.length, timeline.map(logRow)),
+                );
 
           /**
            * The scan tab: three groups instead of twelve flat key/value rows.
@@ -3377,9 +3398,9 @@ window.__ModuleLoader__.load({
                             h(
                               'span',
                               null,
-                              timeline.length === 0
+                              timeline.length + leaks.length === 0
                                 ? t('section.log')
-                                : `${t('section.log')} ${timeline.length}`,
+                                : `${t('section.log')} ${timeline.length + leaks.length}`,
                             ),
                           ),
                           misplacedList,

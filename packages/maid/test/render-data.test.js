@@ -387,13 +387,18 @@ test('RD-10 the counts carry their own sentence underneath', async () => {
   assert.ok(hooks.has('scansentence'));
 });
 
-test('RD-11 the log page puts placements and strays on one timeline', async () => {
+test('RD-11 the log page separates what File Maid placed from what arrived on its own', async () => {
   const { texts, hooks } = await mount({ page: 'misplaced' });
   const indexOf = (needle) => texts.findIndex((value) => value === needle);
   assert.ok(texts.includes('报告.md'), 'the placement is still listed');
   assert.ok(texts.includes('漏网.md'), 'the stray is listed on the same page');
-  assert.ok(texts.includes('log.leakTag'), 'the stray carries its own tag');
-  // 11:59:30 (stray) is newer than 11:59:00 (placement), so it comes first.
-  assert.ok(indexOf('漏网.md') < indexOf('报告.md'), 'newest first, whichever channel it came from');
-  assert.ok(hooks.has('item'), 'both kinds share the same row shape');
+  // Two groups, strays first: the reader who worries about strays finds them at once.
+  // The label carries its count ("<label> 1"), so match on the prefix.
+  const leakGroupAt = texts.findIndex((value) => value.startsWith('log.groupLeak'));
+  const maidGroupAt = texts.findIndex((value) => value.startsWith('log.groupMaid'));
+  assert.ok(leakGroupAt >= 0 && maidGroupAt >= 0, 'both groups are labelled');
+  assert.ok(leakGroupAt < maidGroupAt, 'strays come first');
+  assert.ok(indexOf('漏网.md') < indexOf('报告.md'));
+  assert.ok(hooks.has('loggroup'), 'the groups carry their own hook');
 });
+
