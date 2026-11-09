@@ -417,3 +417,12 @@ test('RD-12 the scan page offers a way into the log without hunting for the tab'
 
 
 
+
+test('RD-13 the log page starts with the rows, not with a heading', async () => {
+  const { texts, hooks } = await mount({ page: 'misplaced' });
+  assert.equal(texts.some((value) => value.startsWith('section.log')), false, 'no section heading');
+  // The group labels stay: they are what separates the two kinds.
+  assert.ok(texts.some((value) => value.startsWith('log.groupLeak')), 'the stray group is labelled');
+  assert.ok(texts.some((value) => value.startsWith('log.groupMaid')), 'the placement group is labelled');
+  assert.ok(hooks.has('loggroup'));
+});

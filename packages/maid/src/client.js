@@ -180,7 +180,6 @@ window.__ModuleLoader__.load({
         'k.onTheirOwn': '没走妹抖的',
         'k.unclear': '说不清',
         'section.catalog': '目录表',
-        'section.log': '最近的落点与漏网',
         'log.groupLeak': '没走妹抖的',
         'log.groupMaid': '妹抖安排的',
         'log.stray': '自己进来的',
@@ -369,7 +368,6 @@ window.__ModuleLoader__.load({
         'k.onTheirOwn': 'not via File Maid',
         'k.unclear': 'unclear',
         'section.catalog': 'Catalog',
-        'section.log': 'Recent placements and strays',
         'log.groupLeak': 'Not via File Maid',
         'log.groupMaid': 'Placed by File Maid',
         'log.stray': 'on its own',
@@ -3394,22 +3392,7 @@ window.__ModuleLoader__.load({
                     ? bodyNode
                     : shownView === 'scan'
                       ? scanBody
-                      : h(
-                          React.Fragment,
-                          null,
-                          h(
-                            'div',
-                            { 'data-file-maid': 'sectionhead' },
-                            h(
-                              'span',
-                              null,
-                              timeline.length + leaks.length === 0
-                                ? t('section.log')
-                                : `${t('section.log')} ${timeline.length + leaks.length}`,
-                            ),
-                          ),
-                          misplacedList,
-                        ),
+                      : misplacedList,
                 )
               : null;
 
