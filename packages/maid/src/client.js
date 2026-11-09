@@ -1931,7 +1931,7 @@ window.__ModuleLoader__.load({
             const name = cut >= 0 ? path.slice(cut + 1) : path;
             const folder = cut >= 0 ? path.slice(0, cut) : '';
             const age = formatAge(item.at, t, now);
-            const id = `file-maid-log-${index}`;
+            const id = `file-maid-log-leak-${index}`;
             const open = openLog === id;
             const at = typeof item.at === 'string' ? new Date(item.at) : undefined;
             // A fixed local stamp beats a locale-formatted one: the panel is Chinese,
@@ -2023,7 +2023,7 @@ window.__ModuleLoader__.load({
           const leakLogRow = (entry, index) => {
             const cut = entry.path.lastIndexOf('/');
             const name = cut >= 0 ? entry.path.slice(cut + 1) : entry.path;
-            const id = `file-maid-log-${index}`;
+            const id = `file-maid-log-route-${index}`;
             const open = openLog === id;
             const age = entry.atMs === 0 ? '' : formatAge(new Date(entry.atMs).toISOString(), t, now);
             return h(

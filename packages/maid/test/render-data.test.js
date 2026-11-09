@@ -460,3 +460,20 @@ test('RD-15 twenty-odd strays come ten at a time, with a pager', async () => {
 function stackCount(texts, prefix) {
   return texts.filter((value) => typeof value === 'string' && value.startsWith(prefix)).length;
 }
+
+test('RD-16 opening one row never opens a row in the other group', async () => {
+  const { tree } = await mount({ page: 'misplaced' });
+  const ids = [];
+  const walk = (node) => {
+    if (node === null || node === undefined) return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (typeof node !== 'object') return;
+    const controls = node.props?.['aria-controls'];
+    if (typeof controls === 'string') ids.push(controls);
+    walk(node.children);
+    walk(node.props?.children);
+  };
+  walk(tree);
+  assert.ok(ids.length >= 2, `both groups rendered rows; saw ${ids.join(', ')}`);
+  assert.equal(new Set(ids).size, ids.length, 'every row owns a unique detail id');
+});
