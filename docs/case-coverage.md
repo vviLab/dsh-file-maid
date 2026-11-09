@@ -331,4 +331,5 @@ console.log(rows.length, 'cases');
 | 用例 | 锁住它的测试 | 文件 |
 | --- | --- | --- |
 | X-01 | X-01 the session tail keeps the newest text within one fence | `core.test.js` |
-| RD-11 | RD-11 the log page puts placements and strays on one timeline | `render-data.test.js` |
+| RD-11 | RD-11 the log page separates what File Maid placed from what arrived on its own | `render-data.test.js` |
+| RD-12 | RD-12 the scan page offers a way into the log without hunting for the tab | `render-data.test.js` |

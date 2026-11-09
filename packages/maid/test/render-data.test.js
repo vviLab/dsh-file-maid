@@ -402,3 +402,15 @@ test('RD-11 the log page separates what File Maid placed from what arrived on it
   assert.ok(hooks.has('loggroup'), 'the groups carry their own hook');
 });
 
+
+
+test('RD-12 the scan page offers a way into the log without hunting for the tab', async () => {
+  const { texts, hooks } = await mount({ page: 'scan' });
+  assert.ok(texts.includes('scan.openLog'), 'the leak group carries the shortcut');
+  assert.ok(hooks.has('linkbutton'), 'it is a quiet link, not a second primary button');
+  const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  // The shortcut switches the card's own view; it must not reach for the host.
+  assert.match(source, /onClick: \(\) => setView\('misplaced'\)/u);
+  assert.doesNotMatch(source, /setView\('scan'\)[^\n]*callRemote/u);
+});
+

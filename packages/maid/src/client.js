@@ -175,6 +175,8 @@ window.__ModuleLoader__.load({
         'scan.noneNew': '这段时间没有新文件。',
         'scan.recordsIncomplete': '记录不全',
         'scan.leakTitle': '需要你看的文件',
+        'scan.openLog': '在日志里看',
+        'scan.leakEmpty': '清单还没读到，先到日志页看全部。',
         'scan.costLine': '读了 {files} 个文件、{dirs} 个文件夹，用时 {ms} 毫秒',
         'section.cost': '这次扫描花了多少',
         'k.byMaid': '妹抖安排的',
@@ -366,6 +368,8 @@ window.__ModuleLoader__.load({
         'scan.noneNew': 'No new files in this period.',
         'scan.recordsIncomplete': 'records incomplete',
         'scan.leakTitle': 'Files worth a look',
+        'scan.openLog': 'See them in the log',
+        'scan.leakEmpty': 'The list has not loaded yet; the log page has everything.',
         'scan.costLine': 'Read {files} files and {dirs} folders in {ms} ms',
         'section.cost': 'What this scan cost',
         'k.byMaid': 'placed by File Maid',
@@ -2461,13 +2465,29 @@ window.__ModuleLoader__.load({
             React.Fragment,
             null,
             ackBar,
-            h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
+            missingBody.length === 0 && acceptedCount === 0
+              ? scanNote('leakempty', t('scan.leakEmpty'))
+              : h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
             ackedBlock,
           );
+          // One click to the page that lists them in full: the scan tab decides, the log
+          // tab is where you go to read the whole story.
+          const leakAside =
+            reportCount === 0
+              ? null
+              : h(
+                  'button',
+                  {
+                    type: 'button',
+                    'data-file-maid': 'linkbutton',
+                    onClick: () => setView('misplaced'),
+                  },
+                  t('scan.openLog'),
+                );
           const leakGroup =
             coverageLost || (reportCount === 0 && acceptedCount === 0)
               ? null
-              : scanGroup('leaks', t('scan.leakTitle'), leakBody, null);
+              : scanGroup('leaks', t('scan.leakTitle'), leakBody, leakAside);
 
           // ── ④ 这次扫描花了多少 ──────────────────────────────────────────────
           // Cost, not value: it answers "is this slow?" and nothing else, so it sits
