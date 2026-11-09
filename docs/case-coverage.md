@@ -331,3 +331,4 @@ console.log(rows.length, 'cases');
 | 用例 | 锁住它的测试 | 文件 |
 | --- | --- | --- |
 | X-01 | X-01 the session tail keeps the newest text within one fence | `core.test.js` |
+| RD-11 | RD-11 the log page puts placements and strays on one timeline | `render-data.test.js` |

@@ -182,7 +182,10 @@ window.__ModuleLoader__.load({
         'k.onTheirOwn': '没走妹抖的',
         'k.unclear': '说不清',
         'section.catalog': '目录表',
-        'section.misplaced': '最近落点',
+        'section.log': '最近的落点与漏网',
+        'log.leakTag': '没走妹抖的',
+        'log.leakWhy': '它出现在扫描范围里，但两个记账通道都没有它的记录。',
+        'log.goScan': '到扫描页看',
         'scan.rerun': '重新扫一次',
         'scan.rerunArm': '再点一次：从现在重新算',
         'scan.rerunWarn': '再扫一次就从现在重新算：这 {n} 个还没确认的文件会算进去，以后不再提醒。',
@@ -368,7 +371,10 @@ window.__ModuleLoader__.load({
         'k.onTheirOwn': 'not via File Maid',
         'k.unclear': 'unclear',
         'section.catalog': 'Catalog',
-        'section.misplaced': 'Recent decisions',
+        'section.log': 'Recent placements and strays',
+        'log.leakTag': 'not via File Maid',
+        'log.leakWhy': 'It appeared inside a tracked folder and neither record channel knows it.',
+        'log.goScan': 'Open the scan tab',
         'scan.rerun': 'Scan now',
         'scan.rerunArm': 'Click again: restart the count',
         'scan.rerunWarn': 'Rescanning restarts the count: these {n} unconfirmed files are absorbed and will not be listed again.',
@@ -1348,6 +1354,8 @@ window.__ModuleLoader__.load({
           const catalogState = catalog?.state;
           const dirs = Array.isArray(catalog?.dirs) ? catalog.dirs : [];
           const misplaced = Array.isArray(status?.misplaced) ? status.misplaced : [];
+          /** The scan's reconciliation, read by both the log timeline and the scan tab. */
+          const reconcile = status?.reconcile;
           /** The scan ran past its budget: the Host now tracks only the managed folders. */
           const degraded = status?.scan?.degraded === true && catalogState === 'MANAGED';
           const [dismissedRoots, setDismissedRoots] = React.useState(readDismissedRoots);
@@ -1981,17 +1989,93 @@ window.__ModuleLoader__.load({
             );
           };
 
+          /** One row per arrival, whichever way it came in. */
+          const leakLogRows = (Array.isArray(reconcile?.missing) ? reconcile.missing : [])
+            .filter((item) => item?.acknowledged !== true)
+            .map((item) => ({
+              kind: 'leak',
+              path: typeof item.path === 'string' ? item.path : '',
+              dir: typeof item.dir === 'string' ? item.dir : null,
+              ctime: Number.isFinite(item.ctime) ? item.ctime : null,
+              atMs: Number.isFinite(item.ctime) ? item.ctime : 0,
+            }));
+          const routeLogRows = misplaced.map((item) => ({
+            kind: 'route',
+            atMs: typeof item.at === 'string' ? Date.parse(item.at) || 0 : 0,
+            item,
+          }));
+          // Newest first. The two clocks disagree in origin but agree in meaning: both
+          // mark when the file showed up, so one list can hold both.
+          const timeline = [...routeLogRows, ...leakLogRows].sort((a, b) => b.atMs - a.atMs);
+
+          const logRow = (entry, index) => (entry.kind === 'leak' ? leakLogRow(entry, index) : misplacedRow(entry.item, index));
+
+          /** A file the plugin never placed: same shape, no target, and a way out. */
+          const leakLogRow = (entry, index) => {
+            const cut = entry.path.lastIndexOf('/');
+            const name = cut >= 0 ? entry.path.slice(cut + 1) : entry.path;
+            const id = `file-maid-log-${index}`;
+            const open = openLog === id;
+            const age = entry.atMs === 0 ? '' : formatAge(new Date(entry.atMs).toISOString(), t, now);
+            return h(
+              'li',
+              { key: `leak-${index}-${entry.path}`, 'data-file-maid': 'item', 'data-open': open ? 'true' : 'false' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  'data-file-maid': 'itemtoggle',
+                  'aria-expanded': open ? 'true' : 'false',
+                  'aria-controls': id,
+                  onClick: () => setOpenLog(open ? '' : id),
+                },
+                h(
+                  'span',
+                  { 'data-file-maid': 'itemhead' },
+                  h('span', { 'data-file-maid': 'chevron', 'aria-hidden': 'true' }, open ? '▾' : '▸'),
+                  h('span', { 'data-file-maid': 'itemname' }, name === '' ? '—' : name),
+                  h(
+                    'span',
+                    { 'data-file-maid': 'itemtarget', 'data-tone': 'warn' },
+                    t('log.leakTag'),
+                  ),
+                  age === '' ? null : h('span', { 'data-file-maid': 'itemage' }, age),
+                ),
+              ),
+              open
+                ? h(
+                    'div',
+                    { 'data-file-maid': 'itemdetail', id },
+                    h(
+                      'div',
+                      { 'data-file-maid': 'itemfact' },
+                      h('span', { 'data-file-maid': 'itemfactlabel' }, t('misplaced.pathLabel')),
+                      h('span', { 'data-file-maid': 'pathline' }, entry.path === '' ? '—' : entry.path),
+                    ),
+                    h(
+                      'div',
+                      { 'data-file-maid': 'itemfact' },
+                      h('span', { 'data-file-maid': 'itemfactlabel' }, t('misplaced.byLabel')),
+                      h('span', { 'data-file-maid': 'itemstamp' }, t('log.leakWhy')),
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        'data-file-maid': 'linkbutton',
+                        onClick: () => setView('scan'),
+                      },
+                      t('log.goScan'),
+                    ),
+                  )
+                : null,
+            );
+          };
+
           const misplacedList =
-            misplaced.length === 0
+            timeline.length === 0
               ? emptyState(t('misplaced.empty'), t('misplaced.emptyHint'))
-              : h(
-                  'ul',
-                  { 'data-file-maid': 'list' },
-                  misplaced
-                    .slice(-10)
-                    .reverse()
-                    .map(misplacedRow),
-                );
+              : h('ul', { 'data-file-maid': 'list' }, timeline.map(logRow));
 
           /**
            * The scan tab: three groups instead of twelve flat key/value rows.
@@ -2003,7 +2087,6 @@ window.__ModuleLoader__.load({
            * right, so the numbers form one vertical axis instead of twelve ragged pairs.
            */
           const scan = status?.scan;
-          const reconcile = status?.reconcile;
           const scanCount = (value) => (Number.isFinite(value) ? value.toLocaleString('en-US') : '—');
           /** One right-hand cell. `tone: 'warn'` marks the one state worth looking at. */
           const scanText = (text, tone) =>
@@ -3294,9 +3377,9 @@ window.__ModuleLoader__.load({
                             h(
                               'span',
                               null,
-                              misplaced.length === 0
-                                ? t('section.misplaced')
-                                : `${t('section.misplaced')} ${misplaced.length}`,
+                              timeline.length === 0
+                                ? t('section.log')
+                                : `${t('section.log')} ${timeline.length}`,
                             ),
                           ),
                           misplacedList,

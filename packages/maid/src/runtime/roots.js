@@ -279,8 +279,8 @@ export function createRoots(options) {
       const document = JSON.parse(text);
       const accepted = refreshed.acknowledged ?? [];
       const rows = [
-        ...refreshed.missing.map((item) => ({ path: item.path, dir: item.dir, acknowledged: false })),
-        ...accepted.map((item) => ({ path: item.path, dir: item.path.split('/')[0], acknowledged: true })),
+        ...refreshed.missing.map((item) => ({ path: item.path, dir: item.dir, ctime: item.ctime ?? null, acknowledged: false })),
+        ...accepted.map((item) => ({ path: item.path, dir: item.path.split('/')[0], ctime: item.ctime ?? null, acknowledged: true })),
       ];
       document.reconcile = {
         ...(document.reconcile ?? {}),
@@ -371,7 +371,10 @@ export function createRoots(options) {
       ? reconciliation
       : {
           ...reconciliation,
-          missing: (reconciliation.missing ?? []).map((item) => ({ path: item.path, dir: item.dir, acknowledged: item.acknowledged === true })),
+          // `ctime` rides along so the log page can put leases and arrivals on one
+          // timeline; `size` and `kind` stay in the review reply, which is where they
+          // are read.
+          missing: (reconciliation.missing ?? []).map((item) => ({ path: item.path, dir: item.dir, ctime: item.ctime ?? null, acknowledged: item.acknowledged === true })),
         unknown_files: reconciliation.unknown_files ?? 0,
         };
     const document = {

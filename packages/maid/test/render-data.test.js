@@ -39,7 +39,7 @@ const STATUS = {
     new_files: 3,
     recorded: 1,
     ledger: 1,
-    missing: [{ path: '80-Outputs/漏网.md', dir: '80-Outputs' }],
+    missing: [{ path: '80-Outputs/漏网.md', dir: '80-Outputs', ctime: Date.parse('2026-11-05T11:59:30.000Z'), acknowledged: false }],
     acknowledged_files: 0,
     missing_total: 2,
     residual: 1,
@@ -385,4 +385,15 @@ test('RD-10 the counts carry their own sentence underneath', async () => {
   // The block needs no title of its own; the numbers are the header.
   assert.equal(texts.includes('section.who'), false, 'the group title is gone');
   assert.ok(hooks.has('scansentence'));
+});
+
+test('RD-11 the log page puts placements and strays on one timeline', async () => {
+  const { texts, hooks } = await mount({ page: 'misplaced' });
+  const indexOf = (needle) => texts.findIndex((value) => value === needle);
+  assert.ok(texts.includes('报告.md'), 'the placement is still listed');
+  assert.ok(texts.includes('漏网.md'), 'the stray is listed on the same page');
+  assert.ok(texts.includes('log.leakTag'), 'the stray carries its own tag');
+  // 11:59:30 (stray) is newer than 11:59:00 (placement), so it comes first.
+  assert.ok(indexOf('漏网.md') < indexOf('报告.md'), 'newest first, whichever channel it came from');
+  assert.ok(hooks.has('item'), 'both kinds share the same row shape');
 });
