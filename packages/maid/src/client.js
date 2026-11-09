@@ -171,12 +171,8 @@ window.__ModuleLoader__.load({
         'verdict.clean': '没有文件绕过妹抖',
         'scan.never': '还没扫过',
         'scan.checked': '{age}查过',
-        'scan.newLine': '这段时间新来了 {n} 个文件。',
-        'scan.noneNew': '这段时间没有新文件。',
         'scan.recordsIncomplete': '记录不全',
-        'scan.leakTitle': '需要你看的文件',
         'scan.openLog': '在日志里看',
-        'scan.leakEmpty': '清单还没读到，先到日志页看全部。',
         'scan.costLine': '读了 {files} 个文件、{dirs} 个文件夹，用时 {ms} 毫秒',
         'section.cost': '这次扫描花了多少',
         'k.byMaid': '妹抖安排的',
@@ -364,12 +360,8 @@ window.__ModuleLoader__.load({
         'verdict.clean': 'Nothing slipped past File Maid',
         'scan.never': 'never scanned',
         'scan.checked': 'checked {age}',
-        'scan.newLine': '{n} new files arrived in this period.',
-        'scan.noneNew': 'No new files in this period.',
         'scan.recordsIncomplete': 'records incomplete',
-        'scan.leakTitle': 'Files worth a look',
         'scan.openLog': 'See them in the log',
-        'scan.leakEmpty': 'The list has not loaded yet; the log page has everything.',
         'scan.costLine': 'Read {files} files and {dirs} folders in {ms} ms',
         'section.cost': 'What this scan cost',
         'k.byMaid': 'placed by File Maid',
@@ -1090,8 +1082,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="verdictmeta"]{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"]{font-size:var(--maid-fs-meta);color:var(--dsw-alias-label-secondary);}',
             '[data-file-maid="scanverdict"][data-tone="warn"]{color:var(--dsw-alias-state-warn-primary);}',
-            '[data-file-maid="scansentence"]{font-size:var(--maid-fs-meta);line-height:1.4;padding:2px 0 2px;color:var(--dsw-alias-label-secondary);}',
-            '[data-file-maid="costtoggle"]{display:flex;align-items:center;gap:4px;min-height:22px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
+                        '[data-file-maid="costtoggle"]{display:flex;align-items:center;gap:4px;min-height:22px;padding:0;border:0;background:none;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);cursor:pointer;}',
             '[data-file-maid="costtoggle"]::before{content:"▸";font-size:var(--maid-fs-meta);line-height:1;}',
             '[data-file-maid="scangroup"][data-open="true"] [data-file-maid="costtoggle"]::before{content:"▾";}',
             '[data-file-maid="loggroup"]{display:flex;flex-direction:column;min-width:0;}',
@@ -2391,6 +2382,20 @@ window.__ModuleLoader__.load({
               'div',
               { 'data-file-maid': 'verdictline' },
               h('span', { 'data-file-maid': 'verdicttext', 'data-tone': verdictTone }, verdictText),
+              // The record of *which* files lives on the log page, so the way there
+              // belongs next to the verdict it explains — not three blocks lower.
+              reportCount === 0
+                ? null
+                : h(
+                    'button',
+                    {
+                      type: 'button',
+                      'data-file-maid': 'linkbutton',
+                      onClick: () => setView('misplaced'),
+                    },
+                    t('scan.openLog'),
+                  ),
+              h('span', { 'data-file-maid': 'spacer' }),
               scanAction,
             ),
             h(
@@ -2432,13 +2437,6 @@ window.__ModuleLoader__.load({
                   // it the three above would not add up to the sentence.
                   residualCell ? scanStat('unclear', num(reconcile.residual), t('k.unclear')) : null,
                 ),
-                // The sentence is the caption of the three numbers above it, so it goes
-                // under them — above, it read like a heading and pushed the counts down.
-                h(
-                  'div',
-                  { 'data-file-maid': 'scansentence' },
-                  Number(reconcile.new_files) > 0 ? fill(t('scan.newLine'), { n: num(reconcile.new_files) }) : t('scan.noneNew'),
-                ),
                 coverageLost
                   ? scanNote('ledgernote', decisionsGap ? t('scan.recordedNote') : t('scan.ledgerNote'))
                   : null,
@@ -2466,29 +2464,15 @@ window.__ModuleLoader__.load({
             React.Fragment,
             null,
             ackBar,
-            missingBody.length === 0 && acceptedCount === 0
-              ? scanNote('leakempty', t('scan.leakEmpty'))
-              : h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
+            h('div', { 'data-file-maid': 'scanrows' }, ...missingBody),
             ackedBlock,
           );
-          // One click to the page that lists them in full: the scan tab decides, the log
-          // tab is where you go to read the whole story.
-          const leakAside =
-            reportCount === 0
-              ? null
-              : h(
-                  'button',
-                  {
-                    type: 'button',
-                    'data-file-maid': 'linkbutton',
-                    onClick: () => setView('misplaced'),
-                  },
-                  t('scan.openLog'),
-                );
+          // No group head and no empty note: the verdict above already says how many are
+          // open, so the rows — when they arrive — simply continue that sentence.
           const leakGroup =
-            coverageLost || (reportCount === 0 && acceptedCount === 0)
+            coverageLost || missingBody.length === 0
               ? null
-              : scanGroup('leaks', t('scan.leakTitle'), leakBody, leakAside);
+              : h('div', { 'data-file-maid': 'scangroup' }, leakBody);
 
           // ── ④ 这次扫描花了多少 ──────────────────────────────────────────────
           // Cost, not value: it answers "is this slow?" and nothing else, so it sits

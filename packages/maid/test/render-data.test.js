@@ -347,8 +347,8 @@ test('RD-07 switching to the scan page renders the verdict and the three counts'
   const { texts, hooks } = await mount({ page: 'scan' });
   assert.ok(hooks.has('verdictband'), 'the answer band is the first thing on the page');
   assert.ok(hooks.has('verdicttext'), 'it carries a sentence, not a category name');
-  assert.ok(hooks.has('scansentence'), 'the period opens with a spoken sentence');
   assert.ok(texts.some((value) => value.includes('3')), 'the new-file count from the snapshot is shown');
+  assert.equal(hooks.has('scansentence'), false, 'the counts need no caption under them');
   // The scan cost is folded away: it answers a question the reader did not ask.
   assert.equal(hooks.has('costline'), false, 'cost stays closed until asked');
 });
@@ -364,27 +364,25 @@ test('RD-08 the scan page builds the rich leak rows from the review reply', asyn
 });
 
 
-test('RD-09 the counts add up to the sentence, and no fact is stated twice', async () => {
+test('RD-09 the counts can exceed the sentence, and no fact is stated twice', async () => {
   const { texts } = await mount({ page: 'scan' });
   const count = (needle) => texts.filter((value) => value === needle).length;
   // The fixture has one residual, so the fourth cell exists and 1+1+2+1 = 5 would be
   // the sentence number; without it the three above would not add up.
   assert.ok(texts.includes('k.unclear'), 'a residual cell appears when there is a residual');
-  // The verdict says "N files did not go through" once; the list head must not repeat it.
-  assert.equal(count('scan.leakTitle'), 1, 'the list head appears once');
+  // The verdict is the only place the count is stated.
   assert.equal(count('verdict.leak'), 1, 'the verdict appears once');
 });
 
 
-test('RD-10 the counts carry their own sentence underneath', async () => {
+test('RD-10 the way to the full list sits on the verdict line', async () => {
   const { texts, hooks } = await mount({ page: 'scan' });
-  const sentence = texts.indexOf('scan.newLine') >= 0 ? texts.indexOf('scan.newLine') : texts.indexOf('scan.noneNew');
-  const firstCell = Math.min(...['k.byMaid', 'k.byTools', 'k.onTheirOwn'].map((key) => texts.indexOf(key)).filter((i) => i >= 0));
-  assert.ok(firstCell >= 0, 'the three counts are rendered');
-  assert.ok(sentence > firstCell, 'the sentence reads under the numbers, not above them');
-  // The block needs no title of its own; the numbers are the header.
-  assert.equal(texts.includes('section.who'), false, 'the group title is gone');
-  assert.ok(hooks.has('scansentence'));
+  const verdictAt = texts.findIndex((value) => value === 'verdict.leak');
+  const linkAt = texts.findIndex((value) => value === 'scan.openLog');
+  assert.ok(verdictAt >= 0 && linkAt > verdictAt, 'the shortcut follows the verdict');
+  // The scan page no longer owns a caption or a list header.
+  assert.equal(hooks.has('scansentence'), false);
+  assert.equal(texts.includes('scan.leakTitle'), false);
 });
 
 test('RD-11 the log page separates what File Maid placed from what arrived on its own', async () => {
@@ -416,4 +414,5 @@ test('RD-12 the scan page offers a way into the log without hunting for the tab'
   assert.match(source, /onClick: \(\) => setView\('misplaced'\)/u);
   assert.doesNotMatch(source, /setView\('scan'\)[^\n]*callRemote/u);
 });
+
 
