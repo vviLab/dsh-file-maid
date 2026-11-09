@@ -1071,7 +1071,8 @@ window.__ModuleLoader__.load({
                the eye can follow down the group instead of twelve ragged pairs. */
             '[data-file-maid="scanlayout"]{display:flex;flex-direction:column;gap:var(--maid-gap-section);min-width:0;}',
             '[data-file-maid="scangroup"]{display:flex;flex-direction:column;gap:var(--maid-gap-head);min-width:0;}',
-            '[data-file-maid="scangroup"]>[data-file-maid="sectionhead"]{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);font-weight:600;line-height:1.4;letter-spacing:.3px;}',
+            '[data-file-maid="scangroup"]>[data-file-maid="sectionhead"]{display:flex;align-items:baseline;justify-content:flex-start;gap:6px;margin:0;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);font-weight:600;line-height:1.4;letter-spacing:.3px;}',
+            '[data-file-maid="scangroup"]>[data-file-maid="sectionhead"]>[data-file-maid="linkbutton"]{flex:0 0 auto;}',
             '[data-file-maid="scanstat"]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 8px;}',
             '[data-file-maid="scancell"]{display:flex;flex-direction:column;min-width:0;}',
             '[data-file-maid="scancell"]>[data-file-maid="scanval"]{flex:0 0 auto;margin-left:0;text-align:left;font-size:var(--maid-fs-num);font-weight:600;line-height:1.3;}',

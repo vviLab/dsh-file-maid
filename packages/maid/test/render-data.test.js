@@ -408,7 +408,10 @@ test('RD-12 the scan page offers a way into the log without hunting for the tab'
   const { texts, hooks } = await mount({ page: 'scan' });
   assert.ok(texts.includes('scan.openLog'), 'the leak group carries the shortcut');
   assert.ok(hooks.has('linkbutton'), 'it is a quiet link, not a second primary button');
+  // It sits beside the title, not on the far edge of the card.
   const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const headRule = source.split('\n').find((line) => line.includes('scangroup"]>[data-file-maid="sectionhead"]'));
+  assert.ok(headRule !== undefined && headRule.includes('justify-content:flex-start'), 'the group head packs from the left');
   // The shortcut switches the card's own view; it must not reach for the host.
   assert.match(source, /onClick: \(\) => setView\('misplaced'\)/u);
   assert.doesNotMatch(source, /setView\('scan'\)[^\n]*callRemote/u);
