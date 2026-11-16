@@ -137,3 +137,27 @@ test('R-31b mount types only shorten the starting cap', async () => {
   assert.ok(Number.isInteger(start) && start >= 1 && start <= SCAN_CONCURRENCY_MAX);
   assert.ok(SCAN_LATENCY_WINDOW > 0);
 });
+
+test('R-47 a tool dependency tree never becomes a stray', async (t) => {
+  // A managed directory holds deliverables, but tools also park their own trees
+  // there. Those are not strays: counting them buries the files that are, and one
+  // `pip --target` can add hundreds at a time.
+  const root = await mkdtemp(join(tmpdir(), 'file-maid-ignore-'));
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
+  const dir = join(root, '80-Outputs');
+  await mkdir(join(dir, '.pylibs', 'pptx'), { recursive: true });
+  await mkdir(join(dir, 'venv', 'lib'), { recursive: true });
+  await mkdir(join(dir, '__pycache__'), { recursive: true });
+  await mkdir(join(dir, '.staging'), { recursive: true });
+  await writeFile(join(dir, 'real.md'), 'x');
+  await writeFile(join(dir, '.pylibs', 'pptx', '__init__.py'), 'x');
+  await writeFile(join(dir, 'venv', 'lib', 'site.py'), 'x');
+  await writeFile(join(dir, '__pycache__', 'real.cpython-312.pyc'), 'x');
+  // A dot-directory that is not on the list still counts: it can hold output.
+  await writeFile(join(dir, '.staging', 'draft.md'), 'x');
+
+  const scan = await scanManaged({ root, catalog: catalogue(['80-Outputs']), since: 0 });
+  const paths = scan.candidates.map((entry) => entry.path).sort();
+  assert.deepEqual(paths, ['80-Outputs/.staging/draft.md', '80-Outputs/real.md'], `saw ${paths.join(', ')}`);
+  assert.equal(scan.files, 2, 'the dependency trees are not counted at all');
+});

@@ -14,8 +14,27 @@ import * as fsp from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { MAID_SEGMENT, hasMaidSegment } from '../core/path.js';
 
-/** Names a scan never descends into. */
-export const SCAN_IGNORED = Object.freeze(['.git', 'node_modules', '.tmp', MAID_SEGMENT, '.DS_Store']);
+/**
+ * Names a scan never descends into: tool-owned trees and OS droppings.
+ *
+ * The dependency trees are here because they are never deliverables and they
+ * arrive by the hundred: one `pip install --target .pylibs` produced 398 of the
+ * 495 strays that once buried everything else (2026-11-16). A dot-directory is
+ * not ignored wholesale — `80-Outputs/.staging/` is still somebody's output and
+ * has to keep showing up as unrecorded.
+ */
+export const SCAN_IGNORED = Object.freeze([
+  '.git',
+  'node_modules',
+  '.tmp',
+  MAID_SEGMENT,
+  '.DS_Store',
+  '.pylibs',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.tox',
+]);
 
 /** File-count ceiling before a `root`-scoped scan refuses to run (`§8.5`). */
 export const SCAN_FILE_BUDGET = 5000;

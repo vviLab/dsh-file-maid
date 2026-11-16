@@ -203,6 +203,7 @@ console.log(rows.length, 'cases');
 | R-44 | R-44 a leak carries both clocks, so a rename is distinguishable from a write | `tools.test.js` |
 | R-45 | R-45 a scan keeps only files whose ctime is inside the window | `ledger.test.js` |
 | R-46 | R-46 the candidate list stops at the limit and says so | `ledger.test.js` |
+| R-47 | R-47 a tool dependency tree never becomes a stray | `scan.test.js` |
 
 ## RD-*
 
