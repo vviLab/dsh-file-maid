@@ -67,8 +67,16 @@ window.__ModuleLoader__.load({
     const STATUS_PATH = '.maid/status.json';
     /** Lines requested per page; the snapshot is far smaller in practice. */
     const PAGE_LINES = 400;
-    /** Hard cap on pages, so a runaway file cannot stall the page. */
-    const MAX_PAGES = 6;
+    /**
+     * Hard cap on pages, so a runaway file cannot stall the page.
+     *
+     * The cap has to cover the Host's own worst case, or the card refuses the very
+     * snapshot it asked for: the projection carries at most `CANDIDATE_LIMIT` (500,
+     * `src/runtime/scan.js`) unacknowledged rows at six pretty-printed lines each,
+     * so a legitimate snapshot is ≈3.2k lines. Ten pages leave margin; anything
+     * larger is still refused rather than streamed forever.
+     */
+    const MAX_PAGES = 10;
     /** Remembered collapsed state of the sidebar card. */
     const OPEN_KEY = 'dsh-file-maid.card.open';
     /** Last state the panel read, shown on the collapsed card header. */
@@ -1430,7 +1438,9 @@ window.__ModuleLoader__.load({
             state.phase === 'loading'
               ? ''
               : state.phase === 'failed'
-                ? t('hint.failed')
+                ? state.message.length > 0
+                  ? `${t('hint.failed')}（${state.message}）`
+                  : t('hint.failed')
                 : state.phase === 'denied'
                   ? t('hint.denied')
                   : state.phase === 'noRoot'

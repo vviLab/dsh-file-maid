@@ -173,7 +173,8 @@ function runtime() {
  * Mount the card with a fixture and collect what it rendered.
  * @returns {Promise<{tree: object, hooks: Set<string>, texts: string[]}>} the result.
  */
-async function mount({ page, status } = {}) {
+async function mount({ page, status, readError } = {}) {
+  const snapshot = status ?? STATUS;
   const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   const dom = new JSDOM('<!doctype html><body><div id="dsh-st-shell-panel"></div></body>', { url: 'http://localhost/' });
   const { window } = dom;
@@ -217,13 +218,13 @@ async function mount({ page, status } = {}) {
   vm.runInContext(source, sandbox);
   assert.ok(module !== null, 'the bundle registers itself');
 
-  const text = JSON.stringify(status ?? STATUS, null, 2);
+  const text = JSON.stringify(snapshot, null, 2);
   const sessions = {
     list: {
-      getSnapshot: () => ({ ids: ['s1'], byId: { s1: { cwd: STATUS.root, updatedAt: 1 } } }),
+      getSnapshot: () => ({ ids: ['s1'], byId: { s1: { cwd: snapshot.root, updatedAt: 1 } } }),
       subscribe: () => () => {},
     },
-    get: () => ({ header: { cwd: STATUS.root } }),
+    get: () => ({ header: { cwd: snapshot.root } }),
   };
   const remote = {
     fileMaid: {
@@ -234,7 +235,7 @@ async function mount({ page, status } = {}) {
         value: {
           ok: true,
           value: {
-            measuredAt: STATUS.generatedAt,
+            measuredAt: snapshot.generatedAt,
             baseline: false,
             truncated: false,
             candidateLimit: 500,
@@ -252,7 +253,21 @@ async function mount({ page, status } = {}) {
     },
     workspaceFiles: {
       stat: async () => ({ ok: true, value: { size: text.length } }),
-      read: async () => ({ ok: true, value: { text, offset: 1, lines: text.split('\n').length, eof: true } }),
+      // The Host serves 400-line pages and reports `eof` only on the last one, so the
+      // card's page budget is exercised here rather than bypassed by one big page.
+      read: async (_sessionId, _path, range) => {
+        if (readError !== undefined) {
+          return { ok: false, error: { code: readError.code, message: readError.message } };
+        }
+        const lines = text.split('\n');
+        const offset = range?.offset ?? 1;
+        const limit = Math.min(range?.limit ?? 400, 400);
+        const page = lines.slice(offset - 1, offset - 1 + limit);
+        return {
+          ok: true,
+          value: { text: page.join('\n'), offset, lines: page.length, eof: offset - 1 + page.length >= lines.length },
+        };
+      },
     },
   };
   const ctx = {
@@ -487,4 +502,41 @@ test('RD-17 a stray row explains itself and stops there', async () => {
   const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
   assert.match(source, /t\('log\.leakWhy'\)/u, 'the reason stays in the expanded row');
   assert.equal(source.includes('log.goScan'), false, 'and the button is gone from the source');
+});
+
+test('RD-18 the card reads the Host\'s largest legitimate snapshot', async () => {
+  // The Host projects at most CANDIDATE_LIMIT (500) unacknowledged rows, six
+  // pretty-printed lines each. A page budget that stops short of that refuses the
+  // snapshot the Host itself wrote, which is what made the card read as broken.
+  const many = Array.from({ length: 500 }, (_, index) => ({
+    path: `80-Outputs/漏网-${String(index).padStart(3, '0')}.md`,
+    dir: '80-Outputs',
+    ctime: Date.parse('2026-11-05T11:59:30.000Z') + index * 1000,
+    acknowledged: false,
+  }));
+  const status = {
+    ...STATUS,
+    reconcile: { ...STATUS.reconcile, missing: many, missing_total: 500, truncated: true },
+  };
+  const lines = JSON.stringify(status, null, 2).split('\n').length;
+  assert.ok(lines > 6 * 400, `the fixture must exceed the old budget; it is ${lines} lines`);
+  const { hooks, texts } = await mount({ status });
+  assert.ok(!texts.includes('state.readError'), 'a long snapshot is read, not refused');
+  assert.ok(texts.includes('state.MANAGED'), 'the badge reports the catalog state');
+  assert.ok(hooks.has('tabrow'), 'the directory rows still render');
+  const source = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const cap = Number(/const MAX_PAGES = (\d+);/u.exec(source)?.[1]);
+  assert.ok(Number.isFinite(cap) && cap * 400 >= lines, `the page budget (${cap} pages) covers ${lines} lines`);
+  assert.match(source, /CANDIDATE_LIMIT/u, 'the cap states where the worst case comes from');
+});
+
+test('RD-19 a failed read states its reason in the card body', async () => {
+  // The wide page keeps a banner; the inline card has no banner, so the reason has to
+  // travel with the hint line — otherwise the reader sees "读不到数据" and nothing else.
+  const reason = 'workspace-file/not-text: the snapshot is not UTF-8 text';
+  const { texts } = await mount({ readError: { code: 'workspace-file/not-text', message: 'the snapshot is not UTF-8 text' } });
+  assert.ok(texts.includes('state.readError'), 'the badge still names the failure');
+  const hint = texts.find((value) => typeof value === 'string' && value.startsWith('hint.failed'));
+  assert.ok(hint !== undefined, 'the next-step hint renders');
+  assert.ok(hint.includes(reason), `the hint carries the reason; saw ${hint}`);
 });
