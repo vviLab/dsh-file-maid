@@ -136,6 +136,7 @@ window.__ModuleLoader__.load({
       descriptorOf('scan', ['root', 'sessionId', 'payload']),
       descriptorOf('review', ['root', 'sessionId']),
       descriptorOf('ack', ['root', 'sessionId', 'payload']),
+      descriptorOf('refresh', ['root', 'sessionId']),
     ];
 
     /** Machine states the snapshot may report. */
@@ -169,7 +170,7 @@ window.__ModuleLoader__.load({
         'col.files': '文件',
         'col.about': '用途',
         'view.label': '视图',
-        'view.dirs': '目录',
+        'view.dirs': '规则',
         'view.misplaced': '日志',
         'view.scan': '扫描',
         'verdict.never': '还没看过这个工作区',
@@ -191,6 +192,8 @@ window.__ModuleLoader__.load({
         'k.onTheirOwn': '没走妹抖的',
         'k.unclear': '说不清',
         'section.catalog': '目录表',
+        'section.routing': '路由规则',
+        'section.ignore': '扫描排除',
         'log.groupLeak': '没走妹抖的',
         'log.groupMaid': '妹抖安排的',
         'log.stray': '自己进来的',
@@ -280,6 +283,16 @@ window.__ModuleLoader__.load({
         'manage.required': '还需要填写：{fields}',
         'manage.pathInvalid': '路径只能写一个文件夹名：不能包含 / 或 \\，也不能以 . 开头。',
         'manage.confirmRemove': '删除 {path}？文件不会被删除，只是不再参与路由。',
+        'ignore.hint': '逐字匹配目录名，命中的目录整支不参与统计',
+        'ignore.floor': '地板不可移除',
+        'ignore.defaults': 'catalog.yml 里还没写清单，先用内置默认',
+        'ignore.declared': '来自 catalog.yml',
+        'ignore.empty': '除了地板，扫描什么都会统计',
+        'ignore.placeholder': '每行一个文件夹名',
+        'ignore.readonly': '这次会话不能改文件，清单只能看',
+        'ignore.pending': '保存中…',
+        'ignore.failed': '清单没保存',
+        'rules.fallback': '没命中时放这里：{path}',
         'more.show': '还有 {n} 个目录',
         'setup.entry': '启用这个根',
         'setup.lead': '这个根还没有目录表。',
@@ -357,7 +370,7 @@ window.__ModuleLoader__.load({
         'col.files': 'files',
         'col.about': 'purpose',
         'view.label': 'view',
-        'view.dirs': 'Directories',
+        'view.dirs': 'Rules',
         'view.misplaced': 'Log',
         'view.scan': 'Scan',
         'verdict.never': 'Not looked at yet',
@@ -379,6 +392,8 @@ window.__ModuleLoader__.load({
         'k.onTheirOwn': 'not via File Maid',
         'k.unclear': 'unclear',
         'section.catalog': 'Catalog',
+        'section.routing': 'Routing',
+        'section.ignore': 'Scan excludes',
         'log.groupLeak': 'Not via File Maid',
         'log.groupMaid': 'Placed by File Maid',
         'log.stray': 'on its own',
@@ -468,6 +483,16 @@ window.__ModuleLoader__.load({
         'manage.required': 'Still missing: {fields}',
         'manage.pathInvalid': 'A folder name only: no / or \\, and it cannot start with a dot.',
         'manage.confirmRemove': 'Delete {path}? Files stay; the folder simply stops routing.',
+        'ignore.hint': 'Exact folder names; a match leaves that whole folder out of the counts',
+        'ignore.floor': 'Fixed floor',
+        'ignore.defaults': 'catalog.yml carries no list yet; the built-in default applies',
+        'ignore.declared': 'From catalog.yml',
+        'ignore.empty': 'Nothing but the floor is skipped',
+        'ignore.placeholder': 'one folder name per line',
+        'ignore.readonly': 'This session cannot write files; the list is read-only',
+        'ignore.pending': 'Saving…',
+        'ignore.failed': 'The list was not saved',
+        'rules.fallback': 'Files land here when nothing matches: {path}',
         'more.show': '{n} more',
         'setup.entry': 'Set up this root',
         'setup.lead': 'This root has no folder table yet.',
@@ -689,6 +714,58 @@ window.__ModuleLoader__.load({
         /* private mode or a full quota: the notice simply returns next time */
       }
     }
+
+    /**
+     * Which group on the 规则 page is folded.
+     *
+     * The two groups answer different questions — where files are routed, and what
+     * a scan refuses to count — so each remembers its own state, and the default
+     * is the one an empty card can afford: routing open, excludes closed. The key
+     * is per group, not per root: the same reader wants the same page shape in
+     * every workspace.
+     */
+    const FOLD_KEY = 'dsh-file-maid.section.';
+
+    /**
+     * Read both fold flags, falling back to the defaults when storage is absent.
+     * @returns {{ routing: boolean, ignore: boolean }} true = folded.
+     */
+    function readFoldState() {
+      const fallback = { routing: false, ignore: true };
+      try {
+        if (typeof localStorage === 'undefined') return fallback;
+        const read = (name) => {
+          const raw = localStorage.getItem(`${FOLD_KEY}${name}`);
+          return raw === null ? fallback[name] : raw === '1';
+        };
+        return { routing: read('routing'), ignore: read('ignore') };
+      } catch {
+        return fallback;
+      }
+    }
+
+    /**
+     * Store one fold flag.
+     * @param {'routing' | 'ignore'} name - which group.
+     * @param {boolean} folded - the new state.
+     * @returns {void}
+     */
+    function writeFoldState(name, folded) {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(`${FOLD_KEY}${name}`, folded ? '1' : '0');
+      } catch {
+        /* private mode: the group still folds for this session */
+      }
+    }
+
+    /**
+     * Names a scan cannot be told to count, whatever `catalog.yml` says.
+     *
+     * The card mirrors the host's floor so it can mark those chips and keep them
+     * out of the editable draft: a name the file cannot remove should not look
+     * like one the reader can.
+     */
+    const SCAN_FLOOR_NAMES = Object.freeze(['.maid', '.git']);
 
     /**
      * The sessions list store, or undefined when the service is unavailable.
@@ -966,6 +1043,34 @@ window.__ModuleLoader__.load({
                measure, so a reader learns the pattern once. */
             '[data-file-maid="sectionhead"] [data-file-maid="linkbutton"]{font-size:var(--maid-fs-meta);line-height:1.4;padding:0 4px;}',
             '[data-file-maid="managebox"]{display:flex;flex-direction:column;gap:6px;margin:0 0 10px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-layer-1);}',
+            // Each group is its own quiet card: a hairline frame, a head that folds, and
+            // the action beside the head so a toggle never swallows a button.
+            '[data-file-maid="rulesbody"]{display:flex;flex-direction:column;gap:0;min-width:0;}',
+            // Each group is its own quiet card: a hairline frame, an 8px radius and a 2%
+            // tint. The card frame replaces the divider, so the group keeps no top margin
+            // of its own beyond the 6px rhythm between cards.
+            '[data-file-maid="rulesection"]{min-width:0;margin:6px 0 0;padding:3px 8px 5px;border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 80%,transparent);border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 2%,transparent);}',
+            '[data-file-maid="rulesection"]:first-child{margin-top:0;}',
+            '[data-file-maid="rulesection"][data-folded="true"]{padding-bottom:2px;}',
+            '[data-file-maid="foldhead"]{display:flex;align-items:center;gap:6px;min-width:0;}',
+            // The row is 20px because the action beside the toggle is 20px; a 24px control
+            // would set the row height on its own and leave the gap the margins cannot close.
+            '[data-file-maid="foldhead"]>[data-file-maid="ghostbutton"]{min-height:18px;padding:0 6px;font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="fold"]{display:flex;align-items:center;gap:4px;flex:1 1 auto;min-width:0;min-height:18px;padding:0;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--maid-fs-meta);font-weight:600;line-height:1.4;letter-spacing:.3px;text-align:left;cursor:pointer;}',
+            '[data-file-maid="fold"]:hover{color:var(--dsw-alias-label-primary);}',
+            '[data-file-maid="fold"]:focus-visible,textarea[data-file-maid="input"]:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}',
+            '[data-file-maid="fold"]:disabled{color:var(--dsw-alias-label-secondary);cursor:default;}',
+            '[data-file-maid="foldglyph"]{flex:0 0 auto;width:1em;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);}',
+            '[data-file-maid="groupname"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="gcount"]{flex:0 0 auto;padding:0 5px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent);color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);font-weight:500;line-height:1.4;font-variant-numeric:tabular-nums;}',
+            '[data-file-maid="chiplist"]{display:flex;flex-wrap:wrap;gap:4px 6px;margin:2px 0 4px;padding-left:6px;}',
+            '[data-file-maid="chip"]{max-width:100%;overflow:hidden;padding:1px 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;color:var(--dsw-alias-label-primary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--maid-fs-meta);line-height:1.4;text-overflow:ellipsis;white-space:nowrap;}',
+            '[data-file-maid="chip"][data-floor="true"]{color:var(--dsw-alias-label-secondary);border-style:dashed;}',
+            '[data-file-maid="chipnote"]{margin:0;padding-left:6px;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="fallbackline"]{display:flex;align-items:center;gap:5px;margin:3px 0 0;padding:0;border:0;color:var(--dsw-alias-label-secondary);font-size:var(--maid-fs-meta);line-height:1.4;}',
+            '[data-file-maid="fallbackglyph"]{flex:0 0 auto;color:var(--dsw-alias-label-secondary);}',
+            '[data-file-maid="fallbackpath"]{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-primary);}',
+            'textarea[data-file-maid="input"]{min-height:96px;padding:6px 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:5px;background:transparent;color:inherit;font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--maid-fs-meta);line-height:1.4;resize:vertical;}',
             '[data-file-maid="managerow"]{display:flex;align-items:center;gap:8px;min-width:0;}',
             '[data-file-maid="input"]{flex:1 1 80px;min-width:0;min-height:28px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:5px;background:transparent;color:inherit;font:inherit;font-size:var(--maid-fs-body);}',
             '[data-file-maid="manageactions"]{display:flex;align-items:center;gap:8px;margin-top:4px;}',
@@ -1036,7 +1141,7 @@ window.__ModuleLoader__.load({
             '[data-file-maid="card"],[data-file-maid="card"] [data-file-maid]{box-sizing:border-box;}',
                         /* Compact scale inside the card: the sidebar column is 264px wide and the
                region above and below it is dense, so every row is tightened here. */
-            '[data-file-maid="card"] [data-file-maid="tabpage"]{gap:8px;padding:0 0 2px;font-size:var(--maid-fs-row);line-height:1.45;}',
+            '[data-file-maid="card"] [data-file-maid="tabpage"]{gap:4px;padding:0 0 2px;font-size:var(--maid-fs-row);line-height:1.45;}',
             '[data-file-maid="card"] [data-file-maid="banner"]{padding:4px 8px;font-size:var(--maid-fs-body);line-height:1.4;}',
             '[data-file-maid="card"] [data-file-maid="muted"]{font-size:var(--maid-fs-body);}',
             '[data-file-maid="card"] [data-file-maid="badge"]{font-size:var(--maid-fs-meta);line-height:1.4;min-height:20px;}',
@@ -1292,6 +1397,14 @@ window.__ModuleLoader__.load({
           const [manage, setManage] = React.useState(undefined);
           const [manageBusy, setManageBusy] = React.useState(false);
           const [manageError, setManageError] = React.useState('');
+          // The 规则 page's other two pieces: which group is folded, and the scan
+          // exclude list while it is being edited.
+          const [folded, setFolded] = React.useState(readFoldState);
+          const [ignoreDraft, setIgnoreDraft] = React.useState(undefined);
+          const [ignoreBusy, setIgnoreBusy] = React.useState(false);
+          const [ignoreError, setIgnoreError] = React.useState('');
+          // A read-only session is discovered by asking the Host, once per mount.
+          const [sessionReadOnly, setSessionReadOnly] = React.useState(false);
           /** A failure from an action that has no form to show it in. */
           const [dirError, setDirError] = React.useState('');
           /** Locale revisions: the card renders outside any slot outlet, so it subscribes itself. */
@@ -1371,6 +1484,30 @@ window.__ModuleLoader__.load({
             }, 30000);
             return () => clearInterval(timer);
           }, []);
+
+          /**
+           * Ask once per mount whether the projection is still the file.
+           *
+           * `status.json` is written by the last save or scan, but `catalog.yml` is
+           * hand-editable: a root with eight folders kept showing seven because
+           * nothing recomputed the projection. The reply says whether the hash
+           * moved — a re-read happens only then — and whether this session may
+           * write at all, which is what disables the exclude editor.
+           */
+          React.useEffect(() => {
+            if (readerId === '' || typeof callRemote !== 'function') return undefined;
+            let live = true;
+            callRemote('refresh', root, readerId).then((result) => {
+              if (!live || result?.ok !== true) return;
+              if (result.value?.readOnly === true) setSessionReadOnly(true);
+              if (result.value?.changed === true) setRevision((value) => value + 1);
+            }).catch(() => {
+              /* a root that cannot answer keeps the projection it already has */
+            });
+            return () => {
+              live = false;
+            };
+          }, [root, readerId]);
 
           const status = state.forReader === readerId ? state.status : undefined;
           const catalog = status?.catalog;
@@ -2859,6 +2996,42 @@ window.__ModuleLoader__.load({
           };
 
           /**
+           * Fold or unfold one group on the 规则 page.
+           * @param {'routing' | 'ignore'} name - which group.
+           * @returns {void}
+           */
+          const foldSection = (name) => {
+            const next = { ...folded, [name]: folded[name] !== true };
+            setFolded(next);
+            writeFoldState(name, next[name] === true);
+          };
+
+          /**
+           * Send the scan exclude list to the Host.
+           *
+           * One name per line is the whole editor: the catalog stores names, never
+           * prose, and the Host answers a path with a sentence this page shows
+           * right where the reader typed it.
+           * @returns {Promise<void>} fulfillment after the attempt.
+           */
+          const submitIgnore = async () => {
+            setIgnoreBusy(true);
+            setIgnoreError('');
+            const names = String(ignoreDraft ?? '')
+              .split('\n')
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0);
+            const result = await callRemote('save', root, readerId, JSON.stringify({ op: 'ignore', ignore: names }));
+            setIgnoreBusy(false);
+            if (result?.ok === true) {
+              setIgnoreDraft(undefined);
+              setRevision((value) => value + 1);
+              return;
+            }
+            setIgnoreError(describeError(result, t('ignore.failed')));
+          };
+
+          /**
            * Ask the Host to open the system folder dialog and take its answer.
            * @returns {Promise<void>} fulfillment after the dialog closed.
            */
@@ -3039,38 +3212,200 @@ window.__ModuleLoader__.load({
                 ),
               );
 
-          const bodyNode = compact
-            ? h(
-                React.Fragment,
-                null,
-                dirs.length === 0
-                  ? null
-                  : h(
-                      'div',
-                      { 'data-file-maid': 'sectionhead' },
-                      h('span', null, `${t('view.dirs')} ${dirs.length}`),
-                      h('span', { 'data-file-maid': 'spacer' }),
-                      h(
-                        'button',
-                        { type: 'button', 'data-file-maid': 'ghostbutton', onClick: () => openManage('add') },
-                        t('manage.add'),
+          /* ---- the 规则 page: routing, the scan's exclusions, and the fallback ---- */
+          const ignoreList = Array.isArray(catalog?.ignore) ? catalog.ignore : [];
+          const ignoreDeclared = catalog?.ignoreDeclared === true;
+          const canEditIgnore = sessionReadOnly !== true && readonly !== true && catalogState === 'MANAGED';
+          /**
+           * One group head: a button that folds it, its row count, and at most one action.
+           *
+           * The button is the whole head, so a pointer anywhere on the line folds the
+           * group; the action sits beside it rather than inside, because an edit control
+           * nested in a toggle is a control the reader cannot aim at.
+           * @param {'routing' | 'ignore'} name - fold key.
+           * @param {string} label - dictionary text.
+           * @param {number | null} count - rows behind it, or null when it carries none.
+           * @param {object | null} action - a node placed at the far end.
+           * @returns {object} the head node.
+           */
+          const sectionHead = (name, label, count, action) =>
+            h(
+              'div',
+              { 'data-file-maid': 'foldhead' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  'data-file-maid': 'fold',
+                  // Folding the exclude group while its editor is open would throw the
+                  // draft away with no way to get it back.
+                  disabled: name === 'ignore' && ignoreDraft !== undefined,
+                  'aria-expanded': folded[name] === true ? 'false' : 'true',
+                  'aria-controls': `file-maid-${name}-panel`,
+                  onClick: () => foldSection(name),
+                },
+                h('span', { 'data-file-maid': 'foldglyph', 'aria-hidden': 'true' }, folded[name] === true ? '▸' : '▾'),
+                h('span', { 'data-file-maid': 'groupname' }, label),
+                count === null ? null : h('span', { 'data-file-maid': 'gcount' }, String(count)),
+              ),
+              action ?? null,
+            );
+          const ignorePanel =
+            ignoreDraft === undefined
+              ? h(
+                  React.Fragment,
+                  null,
+                  h('div', { 'data-file-maid': 'muted' }, ignoreDeclared ? t('ignore.declared') : t('ignore.defaults')),
+                  ignoreList.length === 0
+                    ? h('div', { 'data-file-maid': 'muted' }, t('ignore.empty'))
+                    : h(
+                        'div',
+                        { 'data-file-maid': 'chiplist' },
+                        ignoreList.map((name) =>
+                          h(
+                            'span',
+                            {
+                              key: name,
+                              'data-file-maid': 'chip',
+                              'data-floor': SCAN_FLOOR_NAMES.includes(name) ? 'true' : 'false',
+                            },
+                            name,
+                          ),
+                        ),
                       ),
+                  h('div', { 'data-file-maid': 'chipnote' }, `${t('ignore.floor')}：${SCAN_FLOOR_NAMES.join(' ')}`),
+                  canEditIgnore ? null : h('div', { 'data-file-maid': 'muted' }, t('ignore.readonly')),
+                )
+              : h(
+                  React.Fragment,
+                  null,
+                  h('div', { 'data-file-maid': 'muted' }, t('ignore.hint')),
+                  h('textarea', {
+                    'data-file-maid': 'input',
+                    'data-multiline': 'true',
+                    rows: 6,
+                    value: ignoreDraft,
+                    placeholder: t('ignore.placeholder'),
+                    onChange: (event) => setIgnoreDraft(event.target.value),
+                  }),
+                  ignoreError === '' ? null : h('div', { 'data-file-maid': 'rowerror' }, ignoreError),
+                  h(
+                    'div',
+                    { 'data-file-maid': 'manageactions' },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        'data-file-maid': 'button',
+                        'data-tone': 'primary',
+                        disabled: ignoreBusy,
+                        onClick: () => {
+                          void submitIgnore();
+                        },
+                      },
+                      ignoreBusy ? t('ignore.pending') : t('manage.save'),
                     ),
-                dirError === '' ? null : h('div', { 'data-file-maid': 'rowerror' }, dirError),
-                manageBox,
-                dirs.length === 0
-                  ? hintText === ''
-                    ? null
-                    : emptyState(t('section.catalog'), hintText)
-                  : h('div', { 'data-file-maid': 'tablist', id: 'file-maid-dirlist' }, visibleRows),
-                moreRow,
-              )
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        'data-file-maid': 'linkbutton',
+                        disabled: ignoreBusy,
+                        onClick: () => {
+                          setIgnoreDraft(undefined);
+                          setIgnoreError('');
+                        },
+                      },
+                      t('manage.cancel'),
+                    ),
+                  ),
+                );
+          const routingSection = h(
+            'div',
+            { 'data-file-maid': 'rulesection', 'data-folded': folded.routing === true ? 'true' : 'false' },
+            sectionHead(
+              'routing',
+              t('section.routing'),
+              dirs.length === 0 ? null : dirs.length,
+              dirs.length === 0
+                ? null
+                : h(
+                    'button',
+                    { type: 'button', 'data-file-maid': 'ghostbutton', onClick: () => openManage('add') },
+                    t('manage.add'),
+                  ),
+            ),
+            folded.routing === true
+              ? null
+              : h(
+                  'div',
+                  { id: 'file-maid-routing-panel' },
+                  dirError === '' ? null : h('div', { 'data-file-maid': 'rowerror' }, dirError),
+                  manageBox,
+                  dirs.length === 0
+                    ? hintText === ''
+                      ? null
+                      : emptyState(t('section.catalog'), hintText)
+                    : h('div', { 'data-file-maid': 'tablist', id: 'file-maid-dirlist' }, visibleRows),
+                  moreRow,
+                ),
+          );
+          const ignoreSection = h(
+            'div',
+            { 'data-file-maid': 'rulesection', 'data-folded': folded.ignore === true ? 'true' : 'false' },
+            sectionHead(
+              'ignore',
+              t('section.ignore'),
+              ignoreList.length === 0 ? null : ignoreList.length,
+              canEditIgnore && ignoreDraft === undefined
+                ? h(
+                    'button',
+                    {
+                      type: 'button',
+                      'data-file-maid': 'ghostbutton',
+                      onClick: () => {
+                        setIgnoreError('');
+                        setIgnoreDraft(ignoreList.filter((name) => !SCAN_FLOOR_NAMES.includes(name)).join('\n'));
+                      },
+                    },
+                    t('manage.edit'),
+                  )
+                : null,
+            ),
+            folded.ignore === true ? null : h('div', { id: 'file-maid-ignore-panel' }, ignorePanel),
+          );
+          // The sentence carries the path; splitting it lets the path take the mono face
+          // without a second dictionary entry whose absence would drop the line.
+          const fallbackText =
+            typeof catalog?.rootDefault === 'string' && catalog.rootDefault !== ''
+              ? fill(t('rules.fallback'), { path: catalog.rootDefault })
+              : '';
+          const fallbackAt = fallbackText.lastIndexOf(catalog?.rootDefault ?? '');
+          const fallbackLine =
+            fallbackText === ''
+              ? null
+              : h(
+                  'div',
+                  { 'data-file-maid': 'fallbackline' },
+                  h('span', { 'data-file-maid': 'fallbackglyph', 'aria-hidden': 'true' }, '↳'),
+                  fallbackAt < 0
+                    ? fallbackText
+                    : [
+                        h('span', { key: 'label' }, fallbackText.slice(0, fallbackAt)),
+                        h('span', { key: 'path', 'data-file-maid': 'fallbackpath' }, catalog.rootDefault),
+                      ],
+                );
+
+          // One wrapper, because the page slot is a flex column with a 7px gap: three
+          // sibling groups would each gain that gap on top of their own spacing.
+          const bodyNode = compact
+            ? h('div', { 'data-file-maid': 'rulesbody' }, routingSection, ignoreSection, fallbackLine)
             : h(
                 React.Fragment,
                 null,
                 // The wide page wears the same head as the card's three pages: a quiet
                 // overline with the row count. It used to be a 12px bold primary line,
-                // which made the 目录 and 错投 tabs disagree on the one element they
+                // which made the 规则 and 错投 tabs disagree on the one element they
                 // should agree on. An empty list states itself instead of counting zero.
                 dirs.length === 0
                   ? null
@@ -3081,6 +3416,8 @@ window.__ModuleLoader__.load({
                     ),
                 manageBox,
                 table,
+                ignoreSection,
+                fallbackLine,
               );
 
           /**

@@ -13,6 +13,7 @@ import {
   SCAN_CONCURRENCY_MAX,
   SCAN_LATENCY_WINDOW,
   initialLimit,
+  mergeScanIgnore,
   scanConcurrency,
   scanTree,
 } from '../src/state/probe.js';
@@ -160,4 +161,52 @@ test('R-47 a tool dependency tree never becomes a stray', async (t) => {
   const paths = scan.candidates.map((entry) => entry.path).sort();
   assert.deepEqual(paths, ['80-Outputs/.staging/draft.md', '80-Outputs/real.md'], `saw ${paths.join(', ')}`);
   assert.equal(scan.files, 2, 'the dependency trees are not counted at all');
+});
+
+test('U-02 an empty ignore list keeps the floor and nothing else', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'file-maid-floor-'));
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
+  await mkdir(join(root, '.git', 'objects'), { recursive: true });
+  await writeFile(join(root, '.git', 'objects', 'pack.idx'), 'x');
+  await mkdir(join(root, '.maid'), { recursive: true });
+  await writeFile(join(root, '.maid', 'status.json'), '{}');
+  await mkdir(join(root, '80-Outputs', 'node_modules', 'pkg'), { recursive: true });
+  await writeFile(join(root, '80-Outputs', 'node_modules', 'pkg', 'index.js'), 'x');
+  await writeFile(join(root, '80-Outputs', 'real.md'), 'x');
+
+  const tree = await scanTree(root, { ignore: [] });
+  const names = Object.keys(tree.entries);
+  // `.git` and `.maid` are gone even though the list named neither; the dependency
+  // tree is back because the empty list dropped the built-in defaults.
+  assert.deepEqual(names, ['80-Outputs/node_modules/pkg/index.js', '80-Outputs/real.md'], `saw ${names.join(', ')}`);
+});
+
+test('U-03 the floor cannot be configured away', () => {
+  assert.deepEqual(mergeScanIgnore([]).sort(), ['.git', '.maid']);
+  assert.deepEqual(mergeScanIgnore(['.maid', '.git', 'build']).sort(), ['.git', '.maid', 'build']);
+  assert.ok(mergeScanIgnore(undefined).includes('node_modules'), 'an absent list keeps the built-in defaults');
+  assert.equal(mergeScanIgnore([]).includes('node_modules'), false, 'an empty list drops them');
+});
+
+test('U-04 a configured name matches exactly, not by prefix', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'file-maid-exact-'));
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
+  for (const name of ['build', 'buildt', 'mybuild']) {
+    await mkdir(join(root, '80-Outputs', name), { recursive: true });
+    await writeFile(join(root, '80-Outputs', name, 'f.md'), 'x');
+  }
+  const scan = await scanManaged({ root, catalog: { ...catalogue(['80-Outputs']), ignore: ['build'] }, since: 0 });
+  const paths = scan.candidates.map((entry) => entry.path).sort();
+  assert.deepEqual(paths, ['80-Outputs/buildt/f.md', '80-Outputs/mybuild/f.md'], `saw ${paths.join(', ')}`);
+});
+
+test('U-07 a catalog without the key keeps the built-in defaults', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'file-maid-legacy-'));
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }));
+  await mkdir(join(root, '80-Outputs', 'node_modules', 'pkg'), { recursive: true });
+  await writeFile(join(root, '80-Outputs', 'node_modules', 'pkg', 'index.js'), 'x');
+  await writeFile(join(root, '80-Outputs', 'real.md'), 'x');
+  // The fixture has no `ignore` field at all: the catalog every existing root holds.
+  const scan = await scanManaged({ root, catalog: catalogue(['80-Outputs']), since: 0 });
+  assert.deepEqual(scan.candidates.map((entry) => entry.path).sort(), ['80-Outputs/real.md']);
 });

@@ -27,6 +27,10 @@ const STATUS = {
     state: 'MANAGED',
     hash: 'sha256:abc',
     rootDefault: '80-Outputs',
+    // The catalog declares its own scan exclusions; the floor is already merged in,
+    // the way the Host projects it.
+    ignore: ['.maid', '.git', 'node_modules', 'build'],
+    ignoreDeclared: true,
     ruleCount: 0,
     dirs: [
       { path: '00-Specs', purpose: '工作区通用规范文件', excludes: '日志', files: 4 },
@@ -180,6 +184,9 @@ async function mount({ page, status, readError } = {}) {
   const { window } = dom;
   // The card remembers its collapsed state; the rows only exist while it is open.
   window.localStorage.setItem('dsh-file-maid.card.open', '1');
+  // The exclude group starts folded; unfolding it here is what puts its chips and its
+  // editor through the render walk instead of leaving them untested.
+  window.localStorage.setItem('dsh-file-maid.section.ignore', '0');
   const rt = runtime();
   let element = null;
 
@@ -539,4 +546,20 @@ test('RD-19 a failed read states its reason in the card body', async () => {
   const hint = texts.find((value) => typeof value === 'string' && value.startsWith('hint.failed'));
   assert.ok(hint !== undefined, 'the next-step hint renders');
   assert.ok(hint.includes(reason), `the hint carries the reason; saw ${hint}`);
+});
+
+test('RD-20 the rules page names its two groups, the excluded names, and the fallback', async () => {
+  const { hooks, texts } = await mount();
+  assert.ok(hooks.has('foldhead'), 'the page is two foldable groups');
+  assert.ok(hooks.has('chip'), 'the excluded names are chips');
+  const says = (needle) => texts.some((value) => typeof value === 'string' && value.includes(needle));
+  // Either dictionary: the harness does not pin a locale.
+  // The harness leaves the dictionary unresolved, so a translated label arrives as
+  // its key; the count is its own pill so it can stay small beside the name.
+  assert.ok(says('section.routing'), 'the routing group is named');
+  assert.ok(says('section.ignore'), 'the exclude group is named');
+  assert.ok(hooks.has('gcount'), 'each group carries its own count pill');
+  assert.ok(texts.includes('3') && texts.includes('4'), 'the counts are rendered');
+  assert.ok(says('node_modules'), 'a configured name reached the output');
+  assert.ok(says('rules.fallback'), 'the fallback stays visible below both groups');
 });

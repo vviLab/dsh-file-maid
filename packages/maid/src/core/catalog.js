@@ -16,7 +16,7 @@ import { canonicalCatalogPath, validateCatalogPath } from './path.js';
 export const CATALOG_VERSION = 1;
 
 /** Keys understood at the document root; anything else is reported, not rejected. */
-const KNOWN_ROOT_KEYS = new Set(['version', 'root_default', 'dirs', 'naming']);
+const KNOWN_ROOT_KEYS = new Set(['version', 'root_default', 'dirs', 'naming', 'ignore']);
 
 /** Keys understood on one `dirs[]` entry. */
 const KNOWN_DIR_KEYS = new Set(['path', 'role', 'purpose', 'includes', 'excludes', 'examples']);
@@ -31,6 +31,22 @@ export const PURPOSE_MAX = 200;
 
 /** Longest excludes sentence. Same budget, same reason. */
 export const EXCLUDES_MAX = 200;
+
+/**
+ * Longest single name in the scan ignore list.
+ *
+ * An entry is one folder name matched verbatim, not a paragraph: anything past
+ * 40 characters is a pasted path or a sentence written in the wrong field.
+ */
+export const IGNORE_ITEM_MAX = 40;
+
+/**
+ * Most names one ignore list may carry.
+ *
+ * A hand-written list stays in the tens; hundreds means something generated the
+ * file, and every entry costs a comparison on every directory the scan reads.
+ */
+export const IGNORE_MAX = 200;
 
 /**
  * `role`, `includes` and `rules` are retired: still accepted so older catalogs keep
@@ -188,6 +204,46 @@ export function validateCatalog(raw) {
     }
   }
 
+  // `ignore` is the scan's exclusion list: plain folder names, matched verbatim.
+  // An absent key keeps the built-in defaults; a present one replaces them, which
+  // is the whole point of moving the list out of the code — a root must be able to
+  // stop skipping a name as well as start. `undefined` therefore carries meaning
+  // and must survive serialization as "no key", not as an empty list.
+  let ignore;
+  if (document.ignore !== undefined) {
+    if (!Array.isArray(document.ignore)) {
+      warnings.push(diag('E_MAID_SCHEMA', 'ignore must be an array; the built-in defaults apply', 'ignore'));
+    } else {
+      const seen = new Set();
+      const names = [];
+      for (const entry of document.ignore) {
+        if (typeof entry !== 'string' || entry.trim().length === 0) {
+          warnings.push(diag('E_MAID_SCHEMA', 'ignore contains a non-string or empty entry; ignored', 'ignore'));
+          continue;
+        }
+        const name = entry.trim();
+        if (name.includes('/') || name.includes('\\')) {
+          errors.push(diag('E_MAID_IGNORE_NAME', `ignore entries are folder names, not paths: ${name}`, 'ignore'));
+          continue;
+        }
+        if ([...name].length > IGNORE_ITEM_MAX) {
+          errors.push(diag('E_MAID_IGNORE_LONG', `ignore entry is longer than ${IGNORE_ITEM_MAX} characters: ${name}`, 'ignore'));
+          continue;
+        }
+        if (seen.has(name)) {
+          warnings.push(diag('E_MAID_SCHEMA', `duplicate ignore entry dropped: ${name}`, 'ignore'));
+          continue;
+        }
+        seen.add(name);
+        names.push(name);
+      }
+      if (names.length > IGNORE_MAX) {
+        errors.push(diag('E_MAID_IGNORE_MANY', `ignore lists more than ${IGNORE_MAX} names`, 'ignore'));
+      }
+      ignore = names;
+    }
+  }
+
   // Keyword rules were retired: the routing decision belongs to the model, and a
   // substring match was a second, dumber brain arguing with it. A catalog that still
   // carries them keeps working; the entries are ignored and named in a warning.
@@ -205,7 +261,7 @@ export function validateCatalog(raw) {
 
   return {
     ok: true,
-    catalog: { version: CATALOG_VERSION, rootDefault, dirs },
+    catalog: { version: CATALOG_VERSION, rootDefault, dirs, ignore },
     errors: [],
     warnings,
   };

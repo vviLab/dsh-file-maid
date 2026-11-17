@@ -494,7 +494,7 @@ export function createTools(options) {
         const readOnly = isReadOnlySession(ctx, exec?.agent?.session);
         if (scope === 'root') {
           const startedAt = now();
-          const walked = await probe.scanTree(root, { maxFiles: probe.SCAN_FILE_BUDGET });
+          const walked = await probe.scanTree(root, { maxFiles: probe.SCAN_FILE_BUDGET, ignore: probe.mergeScanIgnore(status.catalog?.ignore) });
           if (walked.truncated) {
             return failure('E_MAID_TOO_LARGE', `scope: root exceeds the ${probe.SCAN_FILE_BUDGET}-file budget; use scope: managed`, { root, scope, suggested_scope: 'managed' });
           }

@@ -183,12 +183,14 @@ test('UI-07 the card mounts the management endpoints', async () => {
   assert.match(body, /callRemote\('save'/u, 'the manager calls the one endpoint');
 });
 
-test('UI-08 the three pages are 目录 / 日志 / 扫描 in both locales', async () => {
+test('UI-08 the three pages are 规则 / 日志 / 扫描 in both locales', async () => {
   const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
-  assert.match(body, /'view\.dirs': '目录'/u);
+  // The tab holds routing rules, the scan's exclusions and the fallback — not just
+  // a directory list, so the label names the whole page.
+  assert.match(body, /'view\.dirs': '规则'/u);
   assert.match(body, /'view\.misplaced': '日志'/u);
   assert.match(body, /'view\.scan': '扫描'/u);
-  assert.match(body, /'view\.dirs': 'Directories'/u);
+  assert.match(body, /'view\.dirs': 'Rules'/u);
   assert.match(body, /'view\.misplaced': 'Log'/u);
   // The three counts are their own header: no group title above them.
   assert.doesNotMatch(body, /'section\.who'/u);
@@ -725,4 +727,63 @@ test('UI-82 the card body keeps its own scrollbar and hands the wheel back at ei
   assert.match(handler, /atBottom/u);
   assert.match(handler, /event\.stopPropagation\(\)/u);
   assert.match(body, /onWheel: onBodyWheel/u, 'the port carries the handler');
+});
+
+test('UI-83 the 规则页签 carries routing, the scan excludes, and the fallback', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /t\('section\.routing'\)/u);
+  assert.match(body, /t\('section\.ignore'\)/u);
+  assert.match(body, /t\('rules\.fallback'\)/u);
+  // The tab still holds `dirs` as its value: renaming a page is not a state migration.
+  assert.match(body, /\{ value: 'dirs', label: t\('view\.dirs'\) \}/u);
+  const routing = body.indexOf("t('section.routing')");
+  const ignore = body.indexOf("t('section.ignore')");
+  const fallback = body.indexOf("t('rules.fallback')");
+  assert.ok(routing > 0 && routing < ignore && ignore < fallback, 'three groups in reading order');
+});
+
+test('UI-84 each group remembers its own fold state, and the exclude list starts folded', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const FOLD_KEY = 'dsh-file-maid\.section\.'/u);
+  // Not the card's own fold key: closing the card must not unfurl the page.
+  assert.match(body, /const OPEN_KEY = 'dsh-file-maid\.card\.open'/u);
+  assert.match(body, /const fallback = \{ routing: false, ignore: true \};/u);
+  assert.match(body, /writeFoldState\(name, next\[name\] === true\);/u);
+});
+
+test('UI-85 the fold head is the button, and the action sits beside it', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /'aria-expanded': folded\[name\] === true \? 'false' : 'true'/u);
+  assert.match(body, /'aria-controls': `file-maid-\$\{name\}-panel`/u);
+  const head = body.slice(body.indexOf('const sectionHead = (name, label, count, action)'), body.indexOf('const ignorePanel ='));
+  // The ＋ 新建 control is a sibling of the toggle: nesting it would swallow the click.
+  assert.match(head, /\),\s*action \?\? null,\s*\);/u);
+  assert.doesNotMatch(head, /ghostbutton/u);
+});
+
+test('UI-86 the floor is shown but never offered for editing', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /const SCAN_FLOOR_NAMES = Object\.freeze\(\['\.maid', '\.git'\]\)/u);
+  assert.match(body, /ignoreList\.filter\(\(name\) => !SCAN_FLOOR_NAMES\.includes\(name\)\)\.join\('\\n'\)/u);
+  assert.match(body, /'data-floor': SCAN_FLOOR_NAMES\.includes\(name\) \? 'true' : 'false'/u);
+});
+
+test('UI-87 the exclude group cannot fold while its editor is open', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /disabled: name === 'ignore' && ignoreDraft !== undefined/u);
+});
+
+test('UI-88 the editor is one name per line and sends the ignore operation', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /\.split\('\\n'\)/u);
+  assert.match(body, /JSON\.stringify\(\{ op: 'ignore', ignore: names \}\)/u);
+  assert.match(body, /'data-file-maid': 'input',\s*\n\s*'data-multiline': 'true'/u);
+});
+
+test('UI-89 a mount asks whether the projection is still the file', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  assert.match(body, /descriptorOf\('refresh', \['root', 'sessionId'\]\)/u);
+  assert.match(body, /callRemote\('refresh', root, readerId\)/u);
+  assert.match(body, /result\.value\?\.changed === true\) setRevision/u);
+  assert.match(body, /result\.value\?\.readOnly === true\) setSessionReadOnly/u);
 });

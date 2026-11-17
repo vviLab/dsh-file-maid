@@ -105,24 +105,47 @@ test('M-06 a root the session does not own is refused before any read', async (t
   assert.equal(result.errors[0].code, 'E_MAID_NO_ROOT');
 });
 
-test('M-07 the descriptors name the six endpoints and the service carries them', () => {
+test('M-07 the descriptors name the seven endpoints and the service carries them', () => {
   const surface = createManageSurface({
     ctx: {},
     roots: { projectRoot: async () => {}, scanRoot: async () => ({}), reloadRoot: async () => 0 },
   });
-  assert.deepEqual(surface.descriptors.map((item) => item.id), ['fileMaid/draft', 'fileMaid/pick', 'fileMaid/save', 'fileMaid/scan', 'fileMaid/review', 'fileMaid/ack']);
+  assert.deepEqual(surface.descriptors.map((item) => item.id), ['fileMaid/draft', 'fileMaid/pick', 'fileMaid/save', 'fileMaid/scan', 'fileMaid/review', 'fileMaid/ack', 'fileMaid/refresh']);
   assert.equal(typeof surface.service.save, 'function');
   assert.equal(typeof surface.service.pick, 'function');
   assert.equal(typeof surface.service.scan, 'function');
   assert.equal(typeof surface.service.draft, 'function');
   assert.equal(typeof surface.service.review, 'function');
   assert.equal(typeof surface.service.ack, 'function');
+  assert.equal(typeof surface.service.refresh, 'function');
   // `draft` takes the typed path as a plain string: the card sends it positionally,
   // so the parameter must not be decoded as JSON.
   const draft = surface.descriptors.find((item) => item.id === 'fileMaid/draft');
   assert.deepEqual(draft.parameters.map((item) => item.name), ['root', 'sessionId', 'path']);
   assert.equal(draft.parameters[2].codec.mode, 'strict');
   assert.equal(surface.service.typertRemote.serviceKey, 'fileMaid');
+});
+
+test('U-05 the ignore list is saved, kept across a directory edit, and echoes the floor', async (t) => {
+  const { root, sessionId, surface } = await makeRoot();
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  const saved = await surface.service.save(root, sessionId, JSON.stringify({ op: 'ignore', ignore: ['node_modules', 'build', '.git', 'build'] }));
+  assert.equal(saved.ok, true, JSON.stringify(saved));
+  // The floor is never stored — it lives in the scanner — but it is echoed as
+  // skipped, because that is what the next scan will do.
+  assert.deepEqual([...saved.value.ignore].sort(), ['.git', '.maid', 'build', 'node_modules']);
+  assert.equal(saved.value.ignoreDeclared, true);
+  assert.deepEqual((await store.readCatalog(root)).catalog.ignore, ['node_modules', 'build']);
+
+  // A later directory edit must not be the reason the file loses the list.
+  const edited = await surface.service.save(root, sessionId, JSON.stringify({ op: 'update', path: '00-Specs', purpose: '规范；标准' }));
+  assert.equal(edited.ok, true, JSON.stringify(edited));
+  assert.deepEqual((await store.readCatalog(root)).catalog.ignore, ['node_modules', 'build']);
+
+  const rejected = await surface.service.save(root, sessionId, JSON.stringify({ op: 'ignore', ignore: ['a/b'] }));
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.errors[0].code, 'E_MAID_IGNORE_NAME');
 });
 
 test('M-08 the folder dialog answer is returned as a path inside the root', async (t) => {

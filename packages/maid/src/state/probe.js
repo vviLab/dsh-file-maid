@@ -36,6 +36,34 @@ export const SCAN_IGNORED = Object.freeze([
   '.tox',
 ]);
 
+/**
+ * Names a scan never descends into, whatever the catalog says.
+ *
+ * The floor is not a default: it is the pair a scan cannot survive losing. The
+ * state directory is this plugin's own bookkeeping (skipping it is what keeps a
+ * scan from counting its own logs as unrouted files), and the repository
+ * metadata is never a deliverable. A configuration that dropped either would
+ * make every count wrong, so they are added at the deepest layer instead of
+ * being left to whoever writes `catalog.yml`.
+ */
+export const SCAN_FLOOR = Object.freeze([MAID_SEGMENT, '.git']);
+
+/**
+ * Turn the catalog's ignore list into the names one scan skips.
+ *
+ * An absent key (`undefined`) keeps the built-in defaults, so a root that never
+ * declares the list behaves exactly as before. A declared list replaces them:
+ * that is what lets a root stop skipping a name it wants counted. The floor is
+ * added either way.
+ * @param {readonly string[] | undefined} list - `catalog.ignore`.
+ * @returns {string[]} the names to skip, floor included.
+ */
+export function mergeScanIgnore(list) {
+  const merged = new Set(SCAN_FLOOR);
+  for (const name of list === undefined ? SCAN_IGNORED : list) merged.add(name);
+  return [...merged];
+}
+
 /** File-count ceiling before a `root`-scoped scan refuses to run (`§8.5`). */
 export const SCAN_FILE_BUDGET = 5000;
 
@@ -349,11 +377,17 @@ export async function ensureDirectory(directory, mode) {
  * Symbolic links are recorded but never descended into: `readdir` reports them
  * as non-directories, so the walk stays inside the controlled root.
  * @param {string} directory - absolute directory to scan.
- * @param {{ ignore?: readonly string[], maxFiles?: number, signal?: AbortSignal, concurrency?: number, now?: () => number, readdir?: Function }} [options] - scan controls; `concurrency` pins the cap and disables the adaptive step.
+ * @param {{ ignore?: readonly string[], additionalIgnore?: readonly string[], maxFiles?: number, signal?: AbortSignal, concurrency?: number, now?: () => number, readdir?: Function }} [options] - scan controls; `concurrency` pins the cap and disables the adaptive step.
  * @returns {Promise<{ entries: Record<string, object>, files: number, dirs: number, truncated: boolean }>} snapshot section.
  */
 export async function scanTree(directory, options = {}) {
   const ignore = new Set(options.ignore ?? SCAN_IGNORED);
+  // The floor is applied here, not by the callers: a scan that descends into
+  // `.maid` counts its own status files, and no caller is trusted to remember.
+  for (const name of SCAN_FLOOR) ignore.add(name);
+  if (options.additionalIgnore) {
+    for (const pattern of options.additionalIgnore) ignore.add(pattern);
+  }
   const maxFiles = options.maxFiles ?? Number.POSITIVE_INFINITY;
   const readdir = options.readdir ?? fsp.readdir;
   const now = options.now ?? Date.now;

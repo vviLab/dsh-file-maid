@@ -11,9 +11,10 @@
 import { execFile } from 'node:child_process';
 import { lstat, realpath, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
-import { EXCLUDES_MAX, PURPOSE_MAX, validateCatalog } from '../core/catalog.js';
+import { EXCLUDES_MAX, IGNORE_ITEM_MAX, IGNORE_MAX, PURPOSE_MAX, validateCatalog } from '../core/catalog.js';
 import { canonicalCatalogPath, validateCatalogPath } from '../core/path.js';
 import * as store from '../state/store.js';
+import { SCAN_FLOOR, mergeScanIgnore } from '../state/probe.js';
 import { isReadOnlySession } from '../runtime/permissions.js';
 import { exportDocument, renderReport, reportName } from './tools.js';
 
@@ -24,7 +25,7 @@ export const REMOTE_PACKAGE = 'dsh-file-maid';
 export const REMOTE_NAMESPACE = 'fileMaid';
 
 /** Operations this surface accepts. */
-export const OPS = Object.freeze(['add', 'update', 'remove']);
+export const OPS = Object.freeze(['add', 'update', 'remove', 'ignore']);
 
 /** Result codec: the envelope is handed over as-is. */
 const RESULT_CODEC = Object.freeze({ mode: 'src-json' });
@@ -81,6 +82,7 @@ export function remoteDescriptors() {
     invocation('scan', ['root', 'sessionId', 'payload']),
     invocation('review', ['root', 'sessionId']),
     invocation('ack', ['root', 'sessionId', 'payload']),
+    invocation('refresh', ['root', 'sessionId']),
   ];
 }
 
@@ -304,6 +306,44 @@ export function createManageSurface(options) {
     if (!OPS.includes(op)) {
       return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: `op must be one of ${OPS.join(', ')}` }] };
     }
+    // The scan ignore list is not a directory row: it has no path to validate,
+    // and it is the one operation whose result is not "one row changed".
+    if (op === 'ignore') {
+      const listed = payload.ignore;
+      if (!Array.isArray(listed)) {
+        return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '扫描排除要传一个名字数组。' }] };
+      }
+      const seen = new Set();
+      const names = [];
+      for (const entry of listed) {
+        if (typeof entry !== 'string') {
+          return { ok: false, errors: [{ code: 'E_MAID_SCHEMA', message: '扫描排除里每一行都要是一个名字。' }] };
+        }
+        const name = entry.trim();
+        if (name.length === 0) continue;
+        if (name.includes('/') || name.includes('\\')) {
+          return { ok: false, errors: [{ code: 'E_MAID_IGNORE_NAME', message: `「${name}」是路径，扫描排除只收文件夹名。`, path: name }] };
+        }
+        if ([...name].length > IGNORE_ITEM_MAX) {
+          return { ok: false, errors: [{ code: 'E_MAID_IGNORE_LONG', message: `「${name}」太长，一个名字最多 ${IGNORE_ITEM_MAX} 个字。`, path: name }] };
+        }
+        if (seen.has(name)) continue;
+        seen.add(name);
+        names.push(name);
+      }
+      if (names.length > IGNORE_MAX) {
+        return { ok: false, errors: [{ code: 'E_MAID_IGNORE_MANY', message: `扫描排除最多 ${IGNORE_MAX} 项。` }] };
+      }
+      // The floor is enforced by the scanner, so storing it would only suggest that
+      // deleting the row turns the name back on.
+      const floor = new Set(SCAN_FLOOR);
+      return {
+        ok: true,
+        dirs: catalog.dirs,
+        rootDefault: catalog.rootDefault,
+        ignore: names.filter((name) => !floor.has(name)),
+      };
+    }
     const rawPath = typeof payload.path === 'string' ? payload.path.trim() : '';
     if (rawPath.length === 0) {
       return { ok: false, errors: [{ code: 'E_MAID_PATH', message: '路径不能为空，填一个文件夹名再保存。' }] };
@@ -375,7 +415,9 @@ export function createManageSurface(options) {
     // The fallback can be moved while editing a row: one save, one write, and the
     // row being edited is the one that becomes the fallback.
     const rootDefault = payload.makeDefault === true ? path : catalog.rootDefault;
-    return { ok: true, dirs, rootDefault };
+    // The ignore list rides through untouched: a directory save must not be the
+    // reason the file loses it.
+    return { ok: true, dirs, rootDefault, ignore: catalog.ignore };
   };
 
   /** How long a second initialisation may wait for the first one, in milliseconds. */
@@ -435,6 +477,15 @@ export function createManageSurface(options) {
       }
       if (item?.code === 'E_MAID_EXCLUDES_LONG') {
         return { ...item, message: `排除最多 ${EXCLUDES_MAX} 个字。` };
+      }
+      if (item?.code === 'E_MAID_IGNORE_NAME') {
+        return { ...item, message: '扫描排除只收文件夹名，不收路径。' };
+      }
+      if (item?.code === 'E_MAID_IGNORE_LONG') {
+        return { ...item, message: `一个名字最多 ${IGNORE_ITEM_MAX} 个字。` };
+      }
+      if (item?.code === 'E_MAID_IGNORE_MANY') {
+        return { ...item, message: `扫描排除最多 ${IGNORE_MAX} 项。` };
       }
       return item;
     });
@@ -533,7 +584,15 @@ export function createManageSurface(options) {
     if (rootDefault === '' || !dirs.some((dir) => dir.path === rootDefault)) {
       return { ok: false, errors: [{ code: 'E_MAID_DEFAULT_MISSING', message: '选一个「没命中时放这里」的目录，判断不出来的文件会进它。', path: '' }] };
     }
-    const verdict = validateCatalog({ version: 1, root_default: rootDefault, dirs, rules: [] });
+    const verdict = validateCatalog({
+      version: 1,
+      root_default: rootDefault,
+      dirs,
+      rules: [],
+      // A first table declares no ignore list: the built-in defaults keep applying
+      // until someone writes one, which is the state every existing root is in.
+      ignore: Array.isArray(payload.ignore) ? payload.ignore : undefined,
+    });
     if (!verdict.ok) return { ok: false, errors: humanErrors(verdict.errors) };
 
     return withRootLock(owned.root, async () => {
@@ -797,7 +856,7 @@ export function createManageSurface(options) {
       const next = await applyOperation(loaded.catalog, decoded.value, owned.root);
       if (!next.ok) return { ok: false, errors: next.errors };
 
-      const verdict = validateCatalog({ version: 1, root_default: next.rootDefault, dirs: next.dirs });
+      const verdict = validateCatalog({ version: 1, root_default: next.rootDefault, dirs: next.dirs, ignore: next.ignore });
       if (!verdict.ok) return { ok: false, errors: humanErrors(verdict.errors) };
 
       try {
@@ -812,6 +871,9 @@ export function createManageSurface(options) {
           op: decoded.value.op,
           path: typeof decoded.value.path === 'string' && decoded.value.path.length > 0 ? canonicalCatalogPath(decoded.value.path) : undefined,
           match: decoded.value.match,
+          // For `ignore` the row count is the only thing that changed; the names
+          // themselves live in the file this line points at.
+          ignore: Array.isArray(next.ignore) ? next.ignore.length : undefined,
           session: sessionId,
         });
       } catch {
@@ -827,14 +889,46 @@ export function createManageSurface(options) {
             excludes: dir.excludes,
           })),
           rootDefault: verdict.catalog.rootDefault,
+          // The card shows what the scanner will actually skip, so the floor is
+          // already merged in; `ignoreDeclared` says whether the file carries the
+          // key at all, which is what tells the card to offer "还原默认".
+          ignore: mergeScanIgnore(verdict.catalog.ignore),
+          ignoreDeclared: verdict.catalog.ignore !== undefined,
           warnings: verdict.warnings,
         },
       };
     },
+    /**
+     * Republish the projection when the catalog changed under the plugin.
+     *
+     * The card reads `status.json`, a projection written by the last save or
+     * scan. The catalog is hand-editable, so that projection can be older than
+     * the file — which is how a root with eight directories kept showing seven.
+     * Re-reading the catalog costs two file reads, not a tree walk, and the
+     * projection is only rewritten when the hash actually moved, so the scan
+     * summary already in it survives an unchanged file.
+     * @param {string} root - controlled root.
+     * @param {string} sessionId - session the card names.
+     * @returns {Promise<object>} `{ ok, value: { changed, hash } }` or `{ ok: false, errors }`.
+     */
+    async refresh(root, sessionId) {
+      const owned = checkRoot(root, sessionId);
+      if (!owned.ok) return { ok: false, errors: owned.errors };
+      // The card shows the edit affordances on this same page, and a read-only
+      // session is only discovered by asking: the projection carries no session.
+      const readOnly = owned.readOnly === true;
+      const loaded = await store.readCatalog(owned.root);
+      const previous = await store.readStatus(owned.root).catch(() => undefined);
+      const before = typeof previous?.catalog?.hash === 'string' ? previous.catalog.hash : null;
+      const after = typeof loaded.hash === 'string' ? loaded.hash : null;
+      if (before === after) return { ok: true, value: { changed: false, hash: after, readOnly } };
+      await roots.projectRoot(owned.root);
+      return { ok: true, value: { changed: true, hash: after, readOnly } };
+    },
   };
   // A thrown error must still be an answer: the card shows a message either way,
   // and an unanswered call reads to the user as a dead connection.
-  for (const name of ['draft', 'pick', 'save']) {
+  for (const name of ['draft', 'pick', 'save', 'refresh']) {
     const method = service[name].bind(service);
     service[name] = async (...args) => {
       try {

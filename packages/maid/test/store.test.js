@@ -152,3 +152,28 @@ test('S-12 a refusal sentence survives the YAML round-trip as one sentence', asy
   const loaded = await store.readCatalog(root);
   assert.equal(loaded.catalog.dirs[0].excludes, '草稿与临时文件');
 });
+
+test('U-01 the scan ignore list survives serialization, including the empty list', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'maid-store-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const { validCatalog } = await import('./helpers.js');
+
+  // No key means "the built-in defaults apply", so the file must not gain one.
+  await store.writeCatalog(root, store.serializeCatalog(validCatalog(), { root }));
+  const undeclared = await readFile(join(root, '.maid', 'catalog.yml'), 'utf8');
+  assert.doesNotMatch(undeclared, /^ignore:/mu);
+  assert.equal((await store.readCatalog(root)).catalog.ignore, undefined);
+
+  // A written list comes back verbatim.
+  const declared = { ...validCatalog(), ignore: ['node_modules', 'build'] };
+  await store.writeCatalog(root, store.serializeCatalog(declared, { root }));
+  assert.deepEqual((await store.readCatalog(root)).catalog.ignore, ['node_modules', 'build']);
+
+  // An empty list is a decision — "skip nothing but the floor" — and an omitted
+  // key would silently turn it back into the defaults.
+  const empty = { ...validCatalog(), ignore: [] };
+  await store.writeCatalog(root, store.serializeCatalog(empty, { root }));
+  const text = await readFile(join(root, '.maid', 'catalog.yml'), 'utf8');
+  assert.match(text, /^ignore: \[\]$/mu);
+  assert.deepEqual((await store.readCatalog(root)).catalog.ignore, []);
+});

@@ -40,6 +40,7 @@
  */
 import { reconcile } from '../core/reconcile.js';
 import * as store from '../state/store.js';
+import { mergeScanIgnore } from '../state/probe.js';
 import { CANDIDATE_LIMIT, scanManaged, snapshotFromIndex, snapshotOf } from './scan.js';
 import { ackKey, pruneAcks } from '../core/ack.js';
 import { measure } from './measure.js';
@@ -386,6 +387,11 @@ export function createRoots(options) {
         hash: entry.catalogHash ?? null,
         rootDefault: catalog?.rootDefault ?? null,
         dirs: directories,
+        // What the scanner will actually skip, floor merged in: the card renders
+        // these as the rule set, and a list that disagreed with the scan would be
+        // a rule the reader cannot check.
+        ignore: mergeScanIgnore(catalog?.ignore),
+        ignoreDeclared: Array.isArray(catalog?.ignore),
         errors: [...(entry.errors ?? [])],
         warnings: [...(entry.warnings ?? [])],
       },

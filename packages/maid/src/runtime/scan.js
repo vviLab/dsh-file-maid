@@ -52,7 +52,12 @@ export async function scanManaged(input) {
 
   for (const dir of ordered) {
     if (input.signal?.aborted) break;
-    const section = await probe.scanTree(join(input.root, dir.path), { signal: input.signal });
+    const section = await probe.scanTree(join(input.root, dir.path), {
+      signal: input.signal,
+      // The catalog's list replaces the built-in defaults; the floor is added
+      // inside `scanTree` either way.
+      ignore: probe.mergeScanIgnore(input.catalog.ignore),
+    });
     let own = 0;
     let ownBytes = 0;
     // One prefix per declared directory: rebuilding the absolute path with `join`

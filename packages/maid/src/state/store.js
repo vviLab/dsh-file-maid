@@ -434,6 +434,11 @@ export function serializeCatalog(catalog, meta) {
   const body = {
     version: 1,
     root_default: catalog.rootDefault,
+    // An undefined list omits the key, which is how "the built-in defaults still
+    // apply" survives a round trip. An array — even an empty one — is written:
+    // "skip nothing but the floor" is a choice, and a dropped key would silently
+    // turn it back into the defaults.
+    ignore: Array.isArray(catalog.ignore) ? [...catalog.ignore] : undefined,
     dirs: catalog.dirs.map((dir) => ({
       path: dir.path,
       purpose: dir.purpose,
@@ -545,7 +550,9 @@ export async function readText(path) {
  * @returns {{ catalog: object, pending: number } | { error: object }} the template, or the reason none can be built.
  */
 export function templateCatalog(input) {
-  const reserved = new Set(['.git', 'node_modules', '.tmp', MAID_SEGMENT, '.DS_Store']);
+  // The same list the scanner skips, not a fourth copy of it: a name that never
+  // becomes a routing directory is a name the template must not offer.
+  const reserved = new Set(probe.SCAN_IGNORED);
   const names = [...new Set(input.directories)]
     .filter((name) => typeof name === 'string' && name.length > 0)
     .filter((name) => !reserved.has(name) && !name.startsWith('.'))

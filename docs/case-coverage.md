@@ -107,7 +107,7 @@ console.log(rows.length, 'cases');
 | M-04 | M-04 removing the default output is refused | `manage.test.js` |
 | M-05 | M-05 removing another directory keeps its files and reprojects | `manage.test.js` |
 | M-06 | M-06 a root the session does not own is refused before any read | `manage.test.js` |
-| M-07 | M-07 the descriptors name the six endpoints and the service carries them | `manage.test.js` |
+| M-07 | M-07 the descriptors name the seven endpoints and the service carries them | `manage.test.js` |
 | M-08 | M-08 the folder dialog answer is returned as a path inside the root | `manage.test.js` |
 | M-09 | M-09 a cancelled dialog and an outside folder are both answered, not thrown | `manage.test.js` |
 | M-10 | M-10 the sessions service is found through get() when ctx.sessions is absent | `manage.test.js` |
@@ -257,6 +257,20 @@ console.log(rows.length, 'cases');
 | T-17 | T-17 maid_review reports the catalog state instead of an empty list | `tools.test.js` |
 | T-18 | T-18 maid_review works in a read-only session and writes nothing | `tools.test.js` |
 
+## U-*
+
+扫描排除清单（`catalog.yml` 的 `ignore:`）的数据层：往返、地板、精确匹配、校验码与卡片编辑入口。
+
+| 用例 | 锁住它的测试 | 文件 |
+| --- | --- | --- |
+| U-01 | U-01 the scan ignore list survives serialization, including the empty list | `store.test.js` |
+| U-02 | U-02 an empty ignore list keeps the floor and nothing else | `scan.test.js` |
+| U-03 | U-03 the floor cannot be configured away | `scan.test.js` |
+| U-04 | U-04 a configured name matches exactly, not by prefix | `scan.test.js` |
+| U-05 | U-05 the ignore list is saved, kept across a directory edit, and echoes the floor | `manage.test.js` |
+| U-06 | U-06 the ignore list rejects paths and overlong names, and dedupes | `core.test.js` |
+| U-07 | U-07 a catalog without the key keeps the built-in defaults | `scan.test.js` |
+
 ## UI-*
 
 | 用例 | 锁住它的测试 | 文件 |
@@ -321,6 +335,13 @@ console.log(rows.length, 'cases');
 | UI-80 | UI-80 the card says how many files it could not name | `ui.test.js` |
 | UI-81 | UI-81 no dictionary key outlives the feature that showed it | `ui.test.js` |
 | UI-82 | UI-82 the card body keeps its own scrollbar and hands the wheel back at either end | `ui.test.js` |
+| UI-83 | UI-83 the 规则页签 carries routing, the scan excludes, and the fallback | `ui.test.js` |
+| UI-84 | UI-84 each group remembers its own fold state, and both open on first paint | `ui.test.js` |
+| UI-85 | UI-85 the fold head is the button, and the action sits beside it | `ui.test.js` |
+| UI-86 | UI-86 the floor is shown but never offered for editing | `ui.test.js` |
+| UI-87 | UI-87 the exclude group cannot fold while its editor is open | `ui.test.js` |
+| UI-88 | UI-88 the editor is one name per line and sends the ignore operation | `ui.test.js` |
+| UI-89 | UI-89 a mount asks whether the projection is still the file | `ui.test.js` |
 
 ## V-*
 
@@ -342,3 +363,4 @@ console.log(rows.length, 'cases');
 | RD-17 | RD-17 a stray row explains itself and stops there | `render-data.test.js` |
 | RD-18 | RD-18 the card reads the Host's largest legitimate snapshot | `render-data.test.js` |
 | RD-19 | RD-19 a failed read states its reason in the card body | `render-data.test.js` |
+| RD-20 | RD-20 the rules page names its two groups, the excluded names, and the fallback | `render-data.test.js` |

@@ -198,3 +198,30 @@ test('C-09 a purpose or excludes sentence has a length ceiling', async () => {
   assert.equal(excludes.ok, false);
   assert.equal(excludes.errors[0].code, 'E_MAID_EXCLUDES_LONG');
 });
+
+test('U-06 the ignore list rejects paths and overlong names, and dedupes', () => {
+  const base = document();
+
+  // An entry is one folder name compared verbatim: a path would never match and
+  // would read as a rule that silently does nothing.
+  const withPath = validateCatalog({ ...base, ignore: ['a/b'] });
+  assert.equal(withPath.ok, false);
+  assert.equal(withPath.errors[0].code, 'E_MAID_IGNORE_NAME');
+
+  const overlong = validateCatalog({ ...base, ignore: ['x'.repeat(41)] });
+  assert.equal(overlong.ok, false);
+  assert.equal(overlong.errors[0].code, 'E_MAID_IGNORE_LONG');
+
+  const crowded = validateCatalog({ ...base, ignore: Array.from({ length: 201 }, (_, index) => `n${index}`) });
+  assert.equal(crowded.ok, false);
+  assert.equal(crowded.errors[0].code, 'E_MAID_IGNORE_MANY');
+
+  const clean = validateCatalog({ ...base, ignore: ['build', 'build', ' dist '] });
+  assert.equal(clean.ok, true);
+  assert.deepEqual(clean.catalog.ignore, ['build', 'dist']);
+
+  // No key and an empty list are different states: the first keeps the built-in
+  // defaults, the second says "skip nothing but the floor".
+  assert.equal(validateCatalog({ ...base }).catalog.ignore, undefined);
+  assert.deepEqual(validateCatalog({ ...base, ignore: [] }).catalog.ignore, []);
+});
