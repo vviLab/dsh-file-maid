@@ -457,3 +457,42 @@ vave-report.md                    → 10-Projects
 第 14 节「组头是 10.5px/600 次要色小标，不是 11.5px 主色分节头」的比较对象已随本次改动消失：主色分节头在三页上都不再存在，组头就是分节头本身。
 
 **结论**：页签用一条作用域限定的 `position:sticky` 固定在卡片正文顶端，滚动容器仍是 `cardbody` 一个，代价是滚动后少看约两行；三页收敛为「一档分节头 + 一套行度量 + 一条右轴 + 一个两行空态」，度量以自定义属性声明在两个根上，卡片与宽版页不得单点漂移。新增与修改的规则全部使用 `--dsw-alias-*` 与既有半径，未新增 `!important`；钩子与规则仍由 `UI-07` 双向校验，固定页签由 `UI-29` 锁定，三页共同语言由 `UI-30` 锁定，宽版页沿用同一档分节头由 `UI-31` 锁定。数据来自把 `client.js` 样式规则抽到无头页面的静态渲染（主题变量近似、未接宿主真实样式）；本机 9222 无 CDP，真机截图未取得（未验证）。
+
+## 16 卡片滚动口与宿主滚轮劫持（2026-11-17）
+
+**导语**：卡片正文 `cardbody` 是限高滚动口（`max-height:min(46vh,320px)`、`overflow-y:auto`），日志页十条两行记录实测内容高 550px、可见 320px。宿主侧栏滚动区（`.hHd-Xa_scrollArea`）在捕获与冒泡两段各挂一个 `wheel` 监听，其中冒泡段为 `passive:false`，对到达该节点的滚轮事件调用 `preventDefault()`。卡片 DOM 位于该节点子树内，取消动作发生在正文之「后」，浏览器因此不执行正文的原生滚动：滚轮在列表上不动，正文右侧也不出现滚动条，十条记录只剩开头约七条可达。
+
+### 16.1 实测（Chrome 157 / macOS，页面 2400×1584 物理、DPR 2、`innerHeight` 792）
+
+| 项 | 读数 | 取法 |
+| --- | --- | --- |
+| 正文滚动能力 | `clientHeight` 320、`scrollHeight` 550、`overflow-y:auto` | `getComputedStyle` 与几何属性 |
+| 程序置位可滚 | `scrollTop = 120` 生效 | `Runtime.evaluate` |
+| 真滚轮不可滚（修复前） | 在行上派发 `mouseWheel deltaY:300`，`scrollTop` 保持 0 | `Input.dispatchMouseEvent` |
+| 事件被谁取消 | 捕获段 `defaultPrevented=false`，冒泡到 `window` 时 `true`；`preventDefault` 调用栈落在宿主 `client-ui-*` bundle 的 `onWheel` | 重写 `Event.prototype.preventDefault` 记录栈 |
+| 监听点 | 祖先链上唯一非 passive 的 `wheel` 监听在 `.hHd-Xa_scrollArea`（第 6 级祖先） | `DOMDebugger.getEventListeners` 逐级枚举 |
+| 修复后真滚轮 | `scrollTop` 0 → 230（等于 `scrollHeight − clientHeight`） | 同上派发方式 |
+| 键盘 | 焦点落在行按钮后按 `ArrowDown` 6 次，正文滚到 230 | `Input.dispatchKeyEvent` |
+| 常显滚动条 | 6 种写法（`scrollbar-width:auto/thin` + `scrollbar-color`、`scrollbar-gutter:stable`、`::-webkit-scrollbar{width:8px}` 及其组合）均为 `offsetWidth − clientWidth = 0` | 页面内临时元素逐一测量 |
+
+### 16.2 改动
+
+滚动口自身拦截滚轮，边界处放行（`[packages/maid/src/client.js#L3606-L3625]`）：
+
+- `onBodyWheel` 读 `event.currentTarget` 的 `scrollHeight − clientHeight`；差 ≤1 时不拦截，正文本来就不需要滚动。
+- 已在顶端且向上滚、已在底端且向下滚时直接返回，事件继续冒泡给宿主，由侧栏滚动区接手；其余情形 `event.stopPropagation()`。
+- 只 `stopPropagation`，不 `preventDefault`：原生滚动由浏览器在派发之后执行，宿主拿不到事件即不会取消它。
+- 处理器挂在 `cardbody` 的 `onWheel` 上。卡片是独立 React root，合成事件在挂载点 `cardslot` 派发，冒泡止于此节点，位于 `.hHd-Xa_scrollArea` 之下。
+
+滚动条样式（`[packages/maid/src/client.js#L1001-L1011]`）：正文规则保持原样，另加 `::-webkit-scrollbar` 宽度与 `::-webkit-scrollbar-thumb`（取 `--dsw-alias-border-l2`、悬停取 `--dsw-alias-label-tertiary`）、轨道透明。宿主样式表对全站声明了 `scrollbar-width:thin`，标准属性优先于遗留伪元素，因此在该宿主内这些规则不产生可见变化；在按经典滚动条渲染的平台上，正文因此得到与卡片边框同色的细条。
+
+| 决策 | 依据 |
+| --- | --- |
+| 在滚动口拦事件，不改宿主 | 宿主监听属于别的插件；改它要么重演「替别的插件渲染组件」的旧问题，要么与宿主升级脱钩 |
+| 拦冒泡而非改 `overscroll-behavior` | `contain` 只约束浏览器自身的链式滚动，管不到宿主的自定义处理器 |
+| 边界放行而非一律拦截 | 一律拦截会把滚轮困在卡片里，长页面下移不动侧栏 |
+| 不引入常显滚动条 | 实测六种写法均不占位（宿主 `scrollbar-width:thin` + macOS 覆盖式滚动条）；自绘导轨要与宿主视觉语言对抗，且在 264px 宽卡片上再占 8px |
+
+**代价**：卡片正文内的滚轮不再到达宿主，边界以外由放行分支补偿，因此只在「正文有可滚余量且未到边界」时覆盖；`overscroll-behavior:contain` 仍在，边界处浏览器侧的链式滚动不恢复。滚动条是否常显由平台决定，本插件不做保证。
+
+**验证**：修复后真机复测通过（真滚轮 0 → 230、键盘 `ArrowDown` 到达 230、边界处 `scrollTop` 停在 230 且宿主滚动区读数不变）；`node --test` 249 通过，其中 `UI-82` 锁定滚动口的三项约束（限高与 `overflow-y:auto`、伪元素滚条规则、边界放行分支）。

@@ -154,7 +154,7 @@ console.log(rows.length, 'cases');
 
 | 用例 | 锁住它的测试 | 文件 |
 | --- | --- | --- |
-| PR-01 | PR-01 the section names every directory and the six rules | `prompt.test.js` |
+| PR-01 | PR-01 the section names every directory and the seven rules | `prompt.test.js` |
 | PR-02 | PR-02 a missing catalog removes the section entirely | `prompt.test.js` |
 | PR-03 | PR-03 the budget is enforced by dropping rows | `prompt.test.js` |
 | PR-04 | PR-04 the same catalog renders byte-identically | `prompt.test.js` |
@@ -320,6 +320,7 @@ console.log(rows.length, 'cases');
 | UI-79 | UI-79 the directory page carries no keyword rules | `ui.test.js` |
 | UI-80 | UI-80 the card says how many files it could not name | `ui.test.js` |
 | UI-81 | UI-81 no dictionary key outlives the feature that showed it | `ui.test.js` |
+| UI-82 | UI-82 the card body keeps its own scrollbar and hands the wheel back at either end | `ui.test.js` |
 
 ## V-*
 

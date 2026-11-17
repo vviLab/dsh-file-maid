@@ -999,6 +999,19 @@ window.__ModuleLoader__.load({
                focused row into view (shift-tab up a long list) it stops short of the strip
                instead of parking the row underneath it. Layout is unaffected. */
             '[data-file-maid="cardbody"]{max-height:min(46vh,320px);overflow-y:auto;overscroll-behavior:contain;scroll-padding-top:42px;}',
+            /* An overlay scrollbar is invisible until the wheel moves, so a body that
+               already holds ten rows reads as a body that ends there. Styling the bar is
+               the only lever this plugin has: on a platform that draws a classic bar the
+               thumb then rides the card palette instead of the default grey rail. It
+               cannot force the bar to exist — the shell sets `scrollbar-width:thin` for
+               the whole app, which makes the browser ignore these legacy pseudo-elements,
+               and macOS draws overlay bars that take no space either way. The real
+               affordance is the wheel fix below; this rule only stops the bar from
+               looking foreign where it is drawn. */
+            '[data-file-maid="cardbody"]::-webkit-scrollbar{width:8px;height:8px;}',
+            '[data-file-maid="cardbody"]::-webkit-scrollbar-track{background:transparent;}',
+            '[data-file-maid="cardbody"]::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:4px;}',
+            '[data-file-maid="cardbody"]::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-label-tertiary);}',
             /* The section switch is the card's control, not part of its content: it keeps
                its place at the top of the scrolling body while the rows pass underneath.
                Sticky rather than a second wrapper, so the body stays the only scroll port
@@ -3579,11 +3592,41 @@ window.__ModuleLoader__.load({
               return next;
             });
           };
+          /**
+           * Keep the card's own scroll port reachable by the wheel.
+           *
+           * The card hangs inside the sidebar's scroll region, and that region owns a
+           * non-passive `wheel` listener which calls `preventDefault()` on every event
+           * that reaches it (`hHd-Xa_scrollArea`, measured on the running Web UI). The
+           * cancel runs after our body has been passed, so the browser never scrolls
+           * the port: the list stops at 320px and a wheel user cannot reach the rest.
+           * Stopping the event at the port keeps the native scroll. At either end the
+           * event is let through untouched, so the sidebar still takes the wheel over
+           * instead of the card trapping it.
+           * @param {object} event - the wheel event bound to the body.
+           * @returns {void}
+           */
+          const onBodyWheel = (event) => {
+            const node = event.currentTarget;
+            if (node === null || event.deltaY === 0) return;
+            const span = node.scrollHeight - node.clientHeight;
+            if (span <= 1) return;
+            const atTop = node.scrollTop <= 0;
+            const atBottom = node.scrollTop >= span - 1;
+            if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) return;
+            event.stopPropagation();
+          };
           // The body stays mounted so the collapsed header can name the state it read;
           // it is hidden rather than unmounted, which keeps one fetch per card mount.
           const body = h(
             'div',
-            { 'data-file-maid': 'cardbody', id: 'file-maid-cardbody', hidden: open ? undefined : true, style: open ? undefined : { display: 'none' } },
+            {
+              'data-file-maid': 'cardbody',
+              id: 'file-maid-cardbody',
+              hidden: open ? undefined : true,
+              style: open ? undefined : { display: 'none' },
+              onWheel: onBodyWheel,
+            },
             h(FileMaidPanel, { compact: true, embedded: true }),
           );
           const badge = cardState.value;

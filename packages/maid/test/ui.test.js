@@ -700,3 +700,29 @@ test('UI-81 no dictionary key outlives the feature that showed it', async () => 
   const orphans = [...new Set(keys)].filter((key) => !used.has(key) && !dynamic(key));
   assert.deepEqual(orphans, [], `keys nobody renders: ${orphans.join(', ')}`);
 });
+
+test('UI-82 the card body keeps its own scrollbar and hands the wheel back at either end', async () => {
+  const body = await readFile(join(packageDir, 'src', 'client.js'), 'utf8');
+  const rule = (hook) => {
+    const at = body.indexOf(`'[data-file-maid="${hook}"]{`);
+    assert.ok(at > 0, `${hook} has a rule`);
+    return body.slice(at, body.indexOf('}', at));
+  };
+  const port = rule('cardbody');
+  assert.match(port, /overflow-y:auto/u, 'the body is the scroll port');
+  assert.match(port, /max-height:min\(46vh,320px\)/u, 'the port is capped, not the whole card');
+  // A bar that only appears while scrolling reads as "the list ends here", which is
+  // exactly the report this test pins down. The platform decides whether a bar takes
+  // space; where it does, it is drawn in the card's own border colour rather than the
+  // default grey rail.
+  assert.match(body, /'\[data-file-maid="cardbody"\]::-webkit-scrollbar\{width:8px;height:8px;\}'/u);
+  assert.match(body, /'\[data-file-maid="cardbody"\]::-webkit-scrollbar-thumb\{background:var\(--dsw-alias-border-l2\)/u, 'the thumb rides the card palette');
+  // The sidebar's scroll region cancels the wheel before the browser scrolls the
+  // port, so the port has to stop the event itself - but only while it can move.
+  const handler = body.slice(body.indexOf('const onBodyWheel'), body.indexOf('const body = h('));
+  assert.match(handler, /const span = node\.scrollHeight - node\.clientHeight/u);
+  assert.match(handler, /if \(span <= 1\) return;/u, 'a body that fits lets the wheel pass');
+  assert.match(handler, /atBottom/u);
+  assert.match(handler, /event\.stopPropagation\(\)/u);
+  assert.match(body, /onWheel: onBodyWheel/u, 'the port carries the handler');
+});
